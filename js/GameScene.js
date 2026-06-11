@@ -8,7 +8,9 @@ const STATE_DUR   = 12;
 const INVINCE_DUR = 1.5;
 
 const APFEL_SMALL = { w: 56, h: 70 };
-const APFEL_LARGE = { w: 88, h: 110 };
+const APFEL_LARGE = { w: 72, h: 90 };   // etwas kleiner als vorher
+
+const GROUND_TILE_H = 72; // Höhe des Boden-Tiles in Pixeln (inkl. Erde)
 
 class GameScene extends Phaser.Scene {
   constructor() { super('GameScene'); }
@@ -40,50 +42,57 @@ class GameScene extends Phaser.Scene {
     this.groundGroup = this.physics.add.staticGroup();
     this.cfg.ground.forEach(([gx, tiles]) => {
       const w = tiles * TILE_SIZE;
-      // Visual
-      const gfx = this.add.graphics().setDepth(0);
-      gfx.fillStyle(0x4a8f3f); gfx.fillRect(gx, GROUND_Y, w, 12);
-      gfx.fillStyle(0x7a5c3a); gfx.fillRect(gx, GROUND_Y + 12, w, 200);
-      // Physics zone (origin 0.5 = center)
-      const zone = this.add.zone(gx + w/2, GROUND_Y + 100, w, 200);
+      // Physics zone — top edge at GROUND_Y
+      const zone = this.add.zone(gx + w/2, GROUND_Y + GROUND_TILE_H/2, w, GROUND_TILE_H + 128);
       this.physics.add.existing(zone, true);
       this.groundGroup.add(zone);
+      // Visual: repeating ground tiles
+      for (let t = 0; t < tiles; t++) {
+        this.add.image(gx + t * TILE_SIZE + TILE_SIZE/2, GROUND_Y + GROUND_TILE_H/2, 'tile_ground')
+          .setDisplaySize(TILE_SIZE, GROUND_TILE_H).setDepth(1);
+      }
     });
 
     // ── Platforms (one-way: passable from below) ──────────────────────────────
     this.platformGroup = this.physics.add.staticGroup();
+    const PLAT_H = 40;
     this.cfg.platforms.forEach(([px, py, tiles]) => {
       const w = tiles * TILE_SIZE;
-      const gfx = this.add.graphics().setDepth(0);
-      gfx.fillStyle(0x4a8f3f); gfx.fillRect(px, py, w, 10);
-      gfx.fillStyle(0x7a5c3a); gfx.fillRect(px, py + 10, w, 22);
-      const zone = this.add.zone(px + w/2, py + 16, w, 32);
+      // Physics zone — top edge at py
+      const zone = this.add.zone(px + w/2, py + PLAT_H/2, w, PLAT_H);
       this.physics.add.existing(zone, true);
       this.platformGroup.add(zone);
+      // Visual: platform tiles
+      for (let t = 0; t < tiles; t++) {
+        this.add.image(px + t * TILE_SIZE + TILE_SIZE/2, py + PLAT_H/2, 'tile_platform')
+          .setDisplaySize(TILE_SIZE, PLAT_H).setDepth(1);
+      }
     });
 
     // ── Coins ────────────────────────────────────────────────────────────────
     this.coinGroup = this.physics.add.group();
     this.cfg.coins.forEach(([cx, cy]) => {
       const coin = this.coinGroup.create(cx, cy, 'coin_1');
-      coin.setDisplaySize(32, 32).setOrigin(0.5).setDepth(1);
+      coin.setDisplaySize(32, 32).setOrigin(0.5).setDepth(2);
       coin.body.allowGravity = false;
+      coin.body.setSize(32, 32);
       coin.play('coin_spin');
     });
 
     // ── Schorlen ─────────────────────────────────────────────────────────────
     this.schorleGroup = this.physics.add.group();
     this.cfg.schorleX.forEach(sx => {
-      const s = this.schorleGroup.create(sx, GROUND_Y - 30, 'schorle');
-      s.setDisplaySize(44, 58).setOrigin(0.5, 1).setDepth(1);
+      const s = this.schorleGroup.create(sx, GROUND_Y - 32, 'schorle');
+      s.setDisplaySize(44, 58).setOrigin(0.5, 1).setDepth(2);
       s.body.allowGravity = false;
-      s._baseY = GROUND_Y - 30;
+      s.body.setSize(36, 52).setOffset(4, 6);
+      s._baseY = GROUND_Y - 32;
       s._bobT  = 0;
     });
 
     // ── Flag ─────────────────────────────────────────────────────────────────
     const fx = this.cfg.flagX;
-    const flagGfx = this.add.graphics().setDepth(1);
+    const flagGfx = this.add.graphics().setDepth(2);
     flagGfx.fillStyle(0x888888); flagGfx.fillRect(fx, GROUND_Y - 200, 8, 200);
     flagGfx.fillStyle(0xdd2222);
     flagGfx.fillTriangle(fx+8, GROUND_Y-200, fx+8, GROUND_Y-140, fx+68, GROUND_Y-170);
@@ -97,16 +106,16 @@ class GameScene extends Phaser.Scene {
     this._createAnimations();
 
     // ── Player ───────────────────────────────────────────────────────────────
-    this.player = this.physics.add.sprite(100, GROUND_Y, 'apfel_small_1');
-    this.player.setOrigin(0, 1).setDepth(2);
+    this.player = this.physics.add.sprite(100, GROUND_Y - 2, 'apfel_small_1');
+    this.player.setOrigin(0, 1).setDepth(3);
     this.player.setMaxVelocity(800, TERM_VEL);
     this._applyStateSize();
 
     // ── Colliders & overlaps ──────────────────────────────────────────────────
     this.physics.add.collider(this.player, this.groundGroup);
-    // Platforms: one-way — only collide when player is falling onto top surface
+    // Platforms: one-way — only collide when falling onto the top surface
     this.physics.add.collider(this.player, this.platformGroup, null,
-      (player, plat) => player.body.velocity.y >= 0 && player.body.bottom <= plat.body.top + 8,
+      (player, plat) => player.body.velocity.y >= 0 && player.body.bottom <= plat.body.top + 10,
       this
     );
     this.physics.add.overlap(this.player, this.coinGroup,    this._onCoin,    null, this);
@@ -182,6 +191,17 @@ class GameScene extends Phaser.Scene {
 
   _onEnemy(player, enemy) {
     if (this.invTimer > 0) return;
+
+    // Stomp: Spieler fällt von oben auf den Feind
+    const stomping = player.body.velocity.y > 20
+                  && player.body.bottom < enemy.body.top + 28;
+    if (stomping) {
+      enemy.destroy();
+      this.player.setVelocityY(-300); // kleiner Absprung nach Stomp
+      return;
+    }
+
+    // Von der Seite getroffen → Zustand verschlechtern
     const order = ['small','largeEmpty','largeHalf','largeFull'];
     const idx = order.indexOf(this.apfelState);
     if (idx <= 0) { this._die(); return; }
@@ -212,11 +232,20 @@ class GameScene extends Phaser.Scene {
     const large = this.apfelState !== 'small';
     const { w, h } = large ? APFEL_LARGE : APFEL_SMALL;
     const feetY = this.player ? this.player.y : GROUND_Y;
+    const bw = Math.round(w * 0.72);
+    const bh = Math.round(h * 0.88);
+    const ox = Math.round(w * 0.14);
+    const oy = Math.round(h * 0.12);
+
     this.player.setDisplaySize(w, h);
     this.player.setOrigin(0, 1);
     this.player.y = feetY;
-    this.player.body.setSize(Math.round(w * 0.72), Math.round(h * 0.9));
-    this.player.body.setOffset(Math.round(w * 0.14), Math.round(h * 0.1));
+    this.player.body.setSize(bw, bh);
+    this.player.body.setOffset(ox, oy);
+
+    // Sofortiges Sync der Physik-Body-Position (verhindert 1-Frame-Glitch beim Größenwechsel)
+    this.player.body.x = this.player.x + ox;
+    this.player.body.y = feetY - h + oy;
 
     const animMap = {
       small:      'apfel_small_run',
@@ -291,8 +320,9 @@ class GameScene extends Phaser.Scene {
       const ex = this.cfg.enemyX[this.nextEnemyIdx++];
       if (ex > this.player.x - 100) {
         const e = this.enemyGroup.create(ex, GROUND_Y, 'elw_1');
-        e.setOrigin(0.5, 1).setDisplaySize(56, 56).setDepth(2).setFlipX(true);
+        e.setOrigin(0.5, 1).setDisplaySize(56, 64).setDepth(3).setFlipX(true);
         e.body.allowGravity = false;
+        e.body.setSize(40, 56).setOffset(8, 8);
         e.setVelocityX(-80);
         e.play('elw_walk');
       }

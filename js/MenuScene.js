@@ -36,6 +36,17 @@ class MenuScene extends Phaser.Scene {
 
     // Schorle
     this.load.image('schorle', 'assets/images/sprites/items/schorle_pickup.png');
+
+    // Ground & platform tiles
+    this.load.image('tile_ground',   'assets/images/sprites/tiles/tile_06.png');
+    this.load.image('tile_platform', 'assets/images/sprites/tiles/tile_03.png');
+
+    // Decorations
+    this.load.image('tree_1', 'assets/images/sprites/tiles/tree_01.png');
+    this.load.image('tree_2', 'assets/images/sprites/tiles/tree_02.png');
+    this.load.image('tree_3', 'assets/images/sprites/tiles/tree_03.png');
+    this.load.image('mushroom', 'assets/images/sprites/tiles/tile_04.png');
+    this.load.image('bush',     'assets/images/sprites/tiles/tile_05.png');
   }
 
   create() {
