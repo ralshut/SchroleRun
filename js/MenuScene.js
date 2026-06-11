@@ -37,16 +37,29 @@ class MenuScene extends Phaser.Scene {
     // Schorle
     this.load.image('schorle', 'assets/images/sprites/items/schorle_pickup.png');
 
-    // Ground & platform tiles
-    this.load.image('tile_ground',   'assets/images/sprites/tiles/tile_06.png');
-    this.load.image('tile_platform', 'assets/images/sprites/tiles/tile_03.png');
+    // Kenney ground and platform tiles
+    const tileSfx = [
+      'block', 'block_top', 'block_top_left', 'block_top_right',
+      'block_center', 'block_left', 'block_right',
+      'horizontal_middle', 'horizontal_left', 'horizontal_right'
+    ];
+    ['grass', 'purple', 'sand'].forEach(theme => {
+      tileSfx.forEach(sfx => {
+        const key = `terrain_${theme}_${sfx}`;
+        this.load.image(key, `assets/images/sprites/tiles/${key}.png`);
+      });
+    });
 
-    // Decorations
-    this.load.image('tree_1', 'assets/images/sprites/tiles/tree_01.png');
-    this.load.image('tree_2', 'assets/images/sprites/tiles/tree_02.png');
-    this.load.image('tree_3', 'assets/images/sprites/tiles/tree_03.png');
-    this.load.image('mushroom', 'assets/images/sprites/tiles/tile_04.png');
-    this.load.image('bush',     'assets/images/sprites/tiles/tile_05.png');
+    // Kenney decorations
+    this.load.image('dec_bush', 'assets/images/sprites/tiles/bush.png');
+    this.load.image('dec_mushroom', 'assets/images/sprites/tiles/mushroom_red.png');
+    this.load.image('dec_sign_right', 'assets/images/sprites/tiles/sign_right.png');
+    this.load.image('dec_sign_exit', 'assets/images/sprites/tiles/sign_exit.png');
+
+    // Kenney flag
+    this.load.image('flag_off', 'assets/images/sprites/tiles/flag_off.png');
+    this.load.image('flag_red_a', 'assets/images/sprites/tiles/flag_red_a.png');
+    this.load.image('flag_red_b', 'assets/images/sprites/tiles/flag_red_b.png');
   }
 
   create() {

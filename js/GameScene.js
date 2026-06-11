@@ -1,4 +1,4 @@
-const GROUND_Y    = 700;
+const GROUND_Y    = 704;
 const TILE_SIZE   = 64;
 const BASE_JUMP   = -420;
 const HOLD_BOOST  = -350;
@@ -8,9 +8,7 @@ const STATE_DUR   = 12;
 const INVINCE_DUR = 1.5;
 
 const APFEL_SMALL = { w: 56, h: 70 };
-const APFEL_LARGE = { w: 72, h: 90 };   // etwas kleiner als vorher
-
-const GROUND_TILE_H = 72; // Höhe des Boden-Tiles in Pixeln (inkl. Erde)
+const APFEL_LARGE = { w: 72, h: 90 };
 
 class GameScene extends Phaser.Scene {
   constructor() { super('GameScene'); }
@@ -38,34 +36,80 @@ class GameScene extends Phaser.Scene {
     this.fgSprite = this.add.tileSprite(W/2, H/2, W, H, this.cfg.fgKey)
       .setScrollFactor(0).setDepth(-1);
 
+    const themes = ['grass', 'purple', 'sand'];
+    const theme = themes[this.levelIdx] ?? 'grass';
+
     // ── Ground (solid from all sides) ────────────────────────────────────────
     this.groundGroup = this.physics.add.staticGroup();
     this.cfg.ground.forEach(([gx, tiles]) => {
       const w = tiles * TILE_SIZE;
-      // Physics zone — top edge at GROUND_Y
-      const zone = this.add.zone(gx + w/2, GROUND_Y + GROUND_TILE_H/2, w, GROUND_TILE_H + 128);
+      // Physics body: solid rectangle from GROUND_Y downward, 128px tall (invisible)
+      const zone = this.add.rectangle(gx + w/2, GROUND_Y + 64, w, 128, 0x000000, 0);
       this.physics.add.existing(zone, true);
       this.groundGroup.add(zone);
-      // Visual: repeating ground tiles
-      for (let t = 0; t < tiles; t++) {
-        this.add.image(gx + t * TILE_SIZE + TILE_SIZE/2, GROUND_Y + GROUND_TILE_H/2, 'tile_ground')
-          .setDisplaySize(TILE_SIZE, GROUND_TILE_H).setDepth(1);
+
+      // Visual tiled representation
+      for (let i = 0; i < tiles; i++) {
+        const tx = gx + i * TILE_SIZE;
+
+        // Top row tile
+        let topKey = `terrain_${theme}_block_top`;
+        if (tiles === 1) {
+          topKey = `terrain_${theme}_block`;
+        } else if (i === 0) {
+          topKey = `terrain_${theme}_block_top_left`;
+        } else if (i === tiles - 1) {
+          topKey = `terrain_${theme}_block_top_right`;
+        }
+
+        this.add.image(tx, GROUND_Y, topKey)
+          .setOrigin(0, 0)
+          .setDisplaySize(TILE_SIZE, TILE_SIZE)
+          .setDepth(1);
+
+        // Underneath fill row (at y = GROUND_Y + 64)
+        let bottomKey = `terrain_${theme}_block_center`;
+        if (tiles === 1) {
+          bottomKey = `terrain_${theme}_block_center`;
+        } else if (i === 0) {
+          bottomKey = `terrain_${theme}_block_left`;
+        } else if (i === tiles - 1) {
+          bottomKey = `terrain_${theme}_block_right`;
+        }
+
+        this.add.image(tx, GROUND_Y + TILE_SIZE, bottomKey)
+          .setOrigin(0, 0)
+          .setDisplaySize(TILE_SIZE, TILE_SIZE)
+          .setDepth(1);
       }
     });
 
     // ── Platforms (one-way: passable from below) ──────────────────────────────
     this.platformGroup = this.physics.add.staticGroup();
-    const PLAT_H = 40;
     this.cfg.platforms.forEach(([px, py, tiles]) => {
       const w = tiles * TILE_SIZE;
-      // Physics zone — top edge at py
-      const zone = this.add.zone(px + w/2, py + PLAT_H/2, w, PLAT_H);
+      // Physics body: top surface at py (invisible)
+      const zone = this.add.rectangle(px + w/2, py + 20, w, 40, 0x000000, 0);
       this.physics.add.existing(zone, true);
       this.platformGroup.add(zone);
-      // Visual: platform tiles
-      for (let t = 0; t < tiles; t++) {
-        this.add.image(px + t * TILE_SIZE + TILE_SIZE/2, py + PLAT_H/2, 'tile_platform')
-          .setDisplaySize(TILE_SIZE, PLAT_H).setDepth(1);
+
+      // Visual tiled representation
+      for (let i = 0; i < tiles; i++) {
+        const tx = px + i * TILE_SIZE;
+
+        let platKey = `terrain_${theme}_horizontal_middle`;
+        if (tiles === 1) {
+          platKey = `terrain_${theme}_horizontal_middle`;
+        } else if (i === 0) {
+          platKey = `terrain_${theme}_horizontal_left`;
+        } else if (i === tiles - 1) {
+          platKey = `terrain_${theme}_horizontal_right`;
+        }
+
+        this.add.image(tx, py, platKey)
+          .setOrigin(0, 0)
+          .setDisplaySize(TILE_SIZE, TILE_SIZE)
+          .setDepth(1);
       }
     });
 
@@ -82,22 +126,63 @@ class GameScene extends Phaser.Scene {
     // ── Schorlen ─────────────────────────────────────────────────────────────
     this.schorleGroup = this.physics.add.group();
     this.cfg.schorleX.forEach(sx => {
-      const s = this.schorleGroup.create(sx, GROUND_Y - 32, 'schorle');
+      const s = this.schorleGroup.create(sx, GROUND_Y - 46, 'schorle');
       s.setDisplaySize(44, 58).setOrigin(0.5, 1).setDepth(2);
       s.body.allowGravity = false;
       s.body.setSize(36, 52).setOffset(4, 6);
-      s._baseY = GROUND_Y - 32;
+      s._baseY = GROUND_Y - 46;
       s._bobT  = 0;
     });
 
     // ── Flag ─────────────────────────────────────────────────────────────────
     const fx = this.cfg.flagX;
-    const flagGfx = this.add.graphics().setDepth(2);
-    flagGfx.fillStyle(0x888888); flagGfx.fillRect(fx, GROUND_Y - 200, 8, 200);
-    flagGfx.fillStyle(0xdd2222);
-    flagGfx.fillTriangle(fx+8, GROUND_Y-200, fx+8, GROUND_Y-140, fx+68, GROUND_Y-170);
-    this.flagZone = this.add.rectangle(fx + 34, GROUND_Y - 100, 68, 200);
+    this.flagSprite = this.add.sprite(fx, GROUND_Y, 'flag_off')
+      .setOrigin(0, 1)
+      .setDisplaySize(TILE_SIZE, TILE_SIZE)
+      .setDepth(2);
+    this.flagZone = this.add.rectangle(fx + TILE_SIZE/2, GROUND_Y - TILE_SIZE/2, TILE_SIZE, TILE_SIZE);
     this.physics.add.existing(this.flagZone, true);
+
+    // ── Ground Decorations ────────────────────────────────────────────────────
+    this.cfg.ground.forEach(([gx, tiles], idx) => {
+      const w = tiles * TILE_SIZE;
+
+      // Start arrow sign on first segment
+      if (idx === 0) {
+        this.add.image(gx + 200, GROUND_Y, 'dec_sign_right')
+          .setOrigin(0.5, 1)
+          .setDisplaySize(64, 64)
+          .setDepth(2);
+      }
+
+      // Exit sign on flag segment
+      if (gx <= fx && fx <= gx + w) {
+        this.add.image(fx - 100, GROUND_Y, 'dec_sign_exit')
+          .setOrigin(0.5, 1)
+          .setDisplaySize(64, 64)
+          .setDepth(2);
+      }
+
+      // Bushes and Mushrooms based on width
+      if (tiles >= 3) {
+        this.add.image(gx + 96, GROUND_Y, 'dec_bush')
+          .setOrigin(0.5, 1)
+          .setDisplaySize(64, 64)
+          .setDepth(2);
+      }
+      if (tiles >= 5) {
+        this.add.image(gx + w - 160, GROUND_Y, 'dec_mushroom')
+          .setOrigin(0.5, 1)
+          .setDisplaySize(48, 48)
+          .setDepth(2);
+      }
+      if (tiles >= 8) {
+        this.add.image(gx + w - 96, GROUND_Y, 'dec_bush')
+          .setOrigin(0.5, 1)
+          .setDisplaySize(64, 64)
+          .setDepth(2);
+      }
+    });
 
     // ── Enemies ───────────────────────────────────────────────────────────────
     this.enemyGroup = this.physics.add.group();
@@ -106,10 +191,13 @@ class GameScene extends Phaser.Scene {
     this._createAnimations();
 
     // ── Player ───────────────────────────────────────────────────────────────
-    this.player = this.physics.add.sprite(100, GROUND_Y - 2, 'apfel_small_1');
+    this.player = this.physics.add.sprite(100, GROUND_Y - 4, 'apfel_small_1');
     this.player.setOrigin(0, 1).setDepth(3);
     this.player.setMaxVelocity(800, TERM_VEL);
     this._applyStateSize();
+    // Force valid physics state
+    this.physics.world.enable(this.player);
+    this.player.body.setCollideWorldBounds(false);
 
     // ── Colliders & overlaps ──────────────────────────────────────────────────
     this.physics.add.collider(this.player, this.groundGroup);
@@ -130,6 +218,13 @@ class GameScene extends Phaser.Scene {
     // ── Input ─────────────────────────────────────────────────────────────────
     this.input.on('pointerdown', this._onPointerDown, this);
     this.input.on('pointerup',   this._onPointerUp,   this);
+
+    // Keyboard support (Spacebar)
+    if (this.input.keyboard) {
+      this.spaceKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+      this.spaceKey.on('down', this._onPointerDown, this);
+      this.spaceKey.on('up', this._onPointerUp, this);
+    }
 
     // ── HUD ───────────────────────────────────────────────────────────────────
     this.scene.launch('HudScene', { gameScene: this });
@@ -160,6 +255,8 @@ class GameScene extends Phaser.Scene {
       [{ key:'elw_1'},{ key:'elw_2'},{ key:'elw_3'},{ key:'elw_2'}], 6);
     def('coin_spin',
       [{ key:'coin_1'},{ key:'coin_2'},{ key:'coin_1'}], 5);
+    def('flag_wave',
+      [{ key: 'flag_red_a' }, { key: 'flag_red_b' }], 5);
   }
 
   // ── Input ─────────────────────────────────────────────────────────────────
@@ -215,7 +312,12 @@ class GameScene extends Phaser.Scene {
   _onFlag() {
     if (this._flagTriggered || this._gameOver) return;
     this._flagTriggered = true;
+    this.flagSprite.play('flag_wave');
     this.input.off('pointerdown'); this.input.off('pointerup');
+    if (this.spaceKey) {
+      this.spaceKey.off('down');
+      this.spaceKey.off('up');
+    }
     this.scene.stop('HudScene');
     this.time.delayedCall(400, () =>
       this.scene.start('WinScene', {
@@ -228,24 +330,35 @@ class GameScene extends Phaser.Scene {
 
   // ── State / size ──────────────────────────────────────────────────────────
 
-  _applyStateSize() {
+  _syncPlayerSize() {
     const large = this.apfelState !== 'small';
     const { w, h } = large ? APFEL_LARGE : APFEL_SMALL;
-    const feetY = this.player ? this.player.y : GROUND_Y;
     const bw = Math.round(w * 0.72);
     const bh = Math.round(h * 0.88);
     const ox = Math.round(w * 0.14);
     const oy = Math.round(h * 0.12);
 
     this.player.setDisplaySize(w, h);
-    this.player.setOrigin(0, 1);
-    this.player.y = feetY;
-    this.player.body.setSize(bw, bh);
-    this.player.body.setOffset(ox, oy);
 
-    // Sofortiges Sync der Physik-Body-Position (verhindert 1-Frame-Glitch beim Größenwechsel)
-    this.player.body.x = this.player.x + ox;
-    this.player.body.y = feetY - h + oy;
+    const frame = this.player.frame;
+    const srcW = frame.realWidth;
+    const srcH = frame.realHeight;
+
+    const unscaledBw = srcW * 0.72;
+    const unscaledBh = srcH * 0.88;
+    const unscaledOx = srcW * 0.14;
+    const unscaledOy = srcH * 0.12;
+
+    this.player.body.setSize(unscaledBw, unscaledBh);
+    this.player.body.setOffset(unscaledOx, unscaledOy);
+  }
+
+  _applyStateSize() {
+    const large = this.apfelState !== 'small';
+    const { w, h } = large ? APFEL_LARGE : APFEL_SMALL;
+    const feetY = this.player ? this.player.y : GROUND_Y;
+    const ox = Math.round(w * 0.14);
+    const oy = Math.round(h * 0.12);
 
     const animMap = {
       small:      'apfel_small_run',
@@ -254,6 +367,15 @@ class GameScene extends Phaser.Scene {
       largeEmpty: 'apfel_large_empty_run',
     };
     this.player.play(animMap[this.apfelState], true);
+
+    this.player.setOrigin(0, 1);
+    this.player.y = feetY;
+
+    this._syncPlayerSize();
+
+    // Immediate sync of the physics body position (using world coordinates)
+    this.player.body.x = this.player.x + ox;
+    this.player.body.y = feetY - h + oy;
   }
 
   _die() {
@@ -261,6 +383,10 @@ class GameScene extends Phaser.Scene {
     this._gameOver = true;
     this.tapHeld = false;
     this.input.off('pointerdown'); this.input.off('pointerup');
+    if (this.spaceKey) {
+      this.spaceKey.off('down');
+      this.spaceKey.off('up');
+    }
     this.player.setVelocityX(0);
     this.player.setVelocityY(-250);
     this.player.setTint(0xff4444);
@@ -274,6 +400,7 @@ class GameScene extends Phaser.Scene {
 
   update(time, delta) {
     if (this._gameOver) return;
+    this._syncPlayerSize();
     const dt = delta / 1000;
 
     // Auto-run
