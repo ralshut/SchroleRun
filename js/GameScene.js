@@ -5,7 +5,7 @@ const HOLD_BOOST  = -350;
 const MAX_HOLD    = 0.4;
 const TERM_VEL    = 700;
 const STATE_DUR   = 12;
-const INVINCE_DUR = 1.5;
+const INVINCE_DUR = 0.5;
 
 const APFEL_SMALL = { w: 56, h: 70 };
 const APFEL_LARGE = { w: 72, h: 90 };
@@ -267,9 +267,6 @@ class GameScene extends Phaser.Scene {
   // ── State / size ──────────────────────────────────────────────────────────
 
   _applyStateSize() {
-    const { w, h } = (this.apfelState !== 'small') ? APFEL_LARGE : APFEL_SMALL;
-    const feetY = this.player ? this.player.y : GROUND_Y;
-
     const animMap = {
       small:      'apfel_small_run',
       largeFull:  'apfel_large_full_run',
@@ -278,14 +275,8 @@ class GameScene extends Phaser.Scene {
     };
     // Animation zuerst starten, damit der korrekte Frame aktiv ist.
     this.player.play(animMap[this.apfelState], true);
-    this.player.y = feetY;
-
     // Größe + Body sperren (siehe _lockPlayerSize).
     this._lockPlayerSize();
-
-    // Body-Position sofort synchronisieren (kein Durchfallen im ersten Frame).
-    this.player.body.x = this.player.x + w * 0.14;
-    this.player.body.y = feetY - h * 0.90;
   }
 
   // Sperrt Anzeigegröße UND Physik-Body – wird JEDEN Frame aufgerufen, weil
