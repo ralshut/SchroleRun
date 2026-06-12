@@ -271,31 +271,32 @@ class GameScene extends Phaser.Scene {
     const { w, h } = large ? APFEL_LARGE : APFEL_SMALL;
     const feetY = this.player ? this.player.y : GROUND_Y;
 
-    this.player.setDisplaySize(w, h);
-    this.player.setOrigin(0, 1);
-    this.player.y = feetY;
-
-    // WICHTIG: Arcade interpretiert setSize/setOffset in QUELL-Texturpixeln
-    // (hier ~169×229) und multipliziert intern mit der Sprite-Skalierung.
-    // Deshalb die Body-Maße als Bruchteil der Frame-Quellgröße angeben –
-    // das ist skalierungs-invariant und ergibt im Display die gewünschten %.
-    const fw = this.player.frame.realWidth;
-    const fh = this.player.frame.realHeight;
-    this.player.body.setSize(fw * 0.72, fh * 0.86, false);
-    this.player.body.setOffset(fw * 0.14, fh * 0.10);
-
-    // Body-Position sofort synchronisieren (Durchfallen beim Wachsen vermeiden)
-    // Body-Oberkante (Display) = Frame-Oberkante + 10% der Höhe
-    this.player.body.x = this.player.x + w * 0.14;
-    this.player.body.y = feetY - h * 0.90;
-
     const animMap = {
       small:      'apfel_small_run',
       largeFull:  'apfel_large_full_run',
       largeHalf:  'apfel_large_half_run',
       largeEmpty: 'apfel_large_empty_run',
     };
+    // ZUERST die Animation starten, damit der korrekte Frame (und dessen
+    // Quellgröße) aktiv ist – klein 169×229, groß 325×434. Sonst wird die
+    // Skalierung am falschen Frame berechnet und der Apfel viel zu groß.
     this.player.play(animMap[this.apfelState], true);
+
+    this.player.setDisplaySize(w, h);
+    this.player.setOrigin(0, 1);
+    this.player.y = feetY;
+
+    // Arcade interpretiert setSize/setOffset in QUELL-Texturpixeln und
+    // multipliziert intern mit der Sprite-Skalierung. Body-Maße deshalb als
+    // Bruchteil der Frame-Quellgröße angeben – skalierungs-invariant.
+    const fw = this.player.frame.realWidth;
+    const fh = this.player.frame.realHeight;
+    this.player.body.setSize(fw * 0.72, fh * 0.86, false);
+    this.player.body.setOffset(fw * 0.14, fh * 0.10);
+
+    // Body-Position sofort synchronisieren (Durchfallen beim Wachsen vermeiden)
+    this.player.body.x = this.player.x + w * 0.14;
+    this.player.body.y = feetY - h * 0.90;
   }
 
   _die() {
