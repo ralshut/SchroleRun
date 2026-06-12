@@ -3,7 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>Schorlemeister JnR</title>
+  <title>Der Schorlemeister – Das letzte Abenteuer</title>
+  <link rel="icon" type="image/png" sizes="180x180" href="assets/images/ui/favicon_180.png">
+  <link rel="icon" type="image/png" sizes="64x64" href="assets/images/ui/favicon_64.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/images/ui/favicon_32.png">
+  <link rel="apple-touch-icon" href="assets/images/ui/favicon_180.png">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -43,7 +47,7 @@
   <script src="js/GameOverScene.js"></script>
   <script src="js/WinScene.js"></script>
   <script>
-    new Phaser.Game({
+    window.game = new Phaser.Game({
       type: Phaser.AUTO,
       width: 450,
       height: 800,

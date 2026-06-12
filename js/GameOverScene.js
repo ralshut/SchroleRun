@@ -5,15 +5,27 @@ class GameOverScene extends Phaser.Scene {
     const W = 450, H = 800;
     const level = data.level ?? 0;
     const totalCoins = data.totalCoins ?? 0;
+    const reason = data.reason ?? 'fell';
 
-    this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0.75);
+    this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0.78);
 
-    this.add.text(W / 2, 260, 'Apfel ist gefallen!', {
-      fontFamily: 'Georgia, serif', fontSize: '32px',
-      color: '#ff5555', stroke: '#000', strokeThickness: 6,
+    const headline = reason === 'caught' ? 'Julia hat dich!' : 'Apfel ist gefallen!';
+    const sub = reason === 'caught'
+      ? 'Ohne Schorle warst du zu langsam …'
+      : 'In die Pfalz-Lücke gestürzt!';
+
+    this.add.text(W / 2, 250, headline, {
+      fontFamily: 'Georgia, serif', fontSize: '34px', fontStyle: 'bold',
+      color: '#ff5555', stroke: '#000', strokeThickness: 6, align: 'center',
     }).setOrigin(0.5);
 
-    this.add.text(W / 2, 330, `Münzen gesammelt: ${totalCoins}`, {
+    this.add.text(W / 2, 305, sub, {
+      fontFamily: 'Georgia, serif', fontSize: '18px', fontStyle: 'italic',
+      color: '#ffffff', stroke: '#000', strokeThickness: 4, align: 'center',
+      wordWrap: { width: 400 },
+    }).setOrigin(0.5);
+
+    this.add.text(W / 2, 360, `Münzen gesammelt: ${totalCoins}`, {
       fontFamily: 'Arial, sans-serif', fontSize: '20px',
       color: '#ffd54f', stroke: '#000', strokeThickness: 4,
     }).setOrigin(0.5);

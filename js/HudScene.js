@@ -13,7 +13,7 @@ class HudScene extends Phaser.Scene {
       strokeThickness: 4,
     });
 
-    this.stateText = this.add.text(16, 44, '', {
+    this.stateText = this.add.text(16, 44, 'SCHORLE', {
       fontFamily: 'Arial, sans-serif',
       fontSize: '16px',
       fontStyle: 'bold',
@@ -22,10 +22,10 @@ class HudScene extends Phaser.Scene {
       strokeThickness: 3,
     });
 
-    // Power-up bar background
-    this.add.rectangle(86, 74, 140, 12, 0x000000, 0.5).setOrigin(0.5, 0.5);
-
-    this.barFill = this.add.rectangle(16, 68, 0, 12, 0x9c27b0).setOrigin(0, 0);
+    // Schorle-Vorsprungsbalken (Hintergrund + Füllung)
+    this.add.rectangle(16, 68, 160, 14, 0x000000, 0.5).setOrigin(0, 0);
+    // Basisbreite 156, Füllung über scaleX (Breite 0 → Division durch 0).
+    this.barFill = this.add.rectangle(18, 70, 156, 10, 0x9c27b0).setOrigin(0, 0);
   }
 
   update() {
@@ -34,27 +34,13 @@ class HudScene extends Phaser.Scene {
     const gs = this.gameScene;
     this.coinText.setText(`Münzen: ${gs.coinsCollected}`);
 
-    const state = gs.apfelState;
-    const stateLabels = {
-      small:      '',
-      largeFull:  'Schorle voll',
-      largeHalf:  'Schorle halb',
-      largeEmpty: 'Schorle leer',
-    };
-    const barColors = {
-      largeFull:  0x9c27b0,
-      largeHalf:  0xff9800,
-      largeEmpty: 0x9e9e9e,
-    };
-
-    this.stateText.setText(stateLabels[state] || '');
-
-    if (state !== 'small') {
-      const ratio = Math.max(0, gs.stateTimer / STATE_DUR);
-      this.barFill.setDisplaySize(140 * ratio, 12);
-      this.barFill.setFillStyle(barColors[state] || 0x9c27b0);
-    } else {
-      this.barFill.setDisplaySize(0, 12);
-    }
+    const fuel = Math.max(0, Math.min(1, gs.fuel ?? 0));
+    // Farbe nach Pegel: voll lila → halb orange → leer rot (Julia kommt näher!)
+    let color = 0x9c27b0;
+    if      (fuel <= 0.40) color = 0xff9800;
+    if      (fuel <= 0.12) color = 0xe53935;
+    this.barFill.scaleX = fuel;
+    this.barFill.setFillStyle(color);
+    this.stateText.setColor(fuel <= 0.12 ? '#ff5555' : '#ffd54f');
   }
 }

@@ -30,6 +30,9 @@ class MenuScene extends Phaser.Scene {
     for (let i = 1; i <= 3; i++)
       this.load.image(`elw_${i}`, `assets/images/sprites/enemies/elwetrische_0${i}.png`);
 
+    // Julia – die Verfolgerin (aus dem Poster montiert)
+    this.load.image('julia', 'assets/images/sprites/enemies/julia_chase.png');
+
     // Coins
     this.load.image('coin_1', 'assets/images/sprites/items/coin_01.png');
     this.load.image('coin_2', 'assets/images/sprites/items/coin_02.png');
@@ -76,6 +79,18 @@ class MenuScene extends Phaser.Scene {
     // Title image fills screen
     const title = this.add.image(W / 2, H / 2, 'title_screen');
     title.setDisplaySize(W, H);
+
+    // Titel-Schriftzug
+    this.add.text(W / 2, 66, 'DER SCHORLEMEISTER', {
+      fontFamily: 'Georgia, serif', fontSize: '33px', fontStyle: 'bold',
+      color: '#ffd54f', stroke: '#000', strokeThickness: 7,
+      align: 'center',
+    }).setOrigin(0.5);
+
+    this.add.text(W / 2, 118, 'Das letzte Abenteuer', {
+      fontFamily: 'Georgia, serif', fontSize: '24px', fontStyle: 'italic',
+      color: '#ffffff', stroke: '#000', strokeThickness: 5,
+    }).setOrigin(0.5);
 
     // Pulsing start text
     const startText = this.add.text(W / 2, H - 120, 'TIPPEN ZUM STARTEN', {
