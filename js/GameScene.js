@@ -44,8 +44,8 @@ class GameScene extends Phaser.Scene {
     this.cfg.ground.forEach(([gx, tiles]) => {
       const w = tiles * TILE_SIZE;
       // Invisible physics body: top edge at GROUND_Y
-      // Zone top = GROUND_Y + 2 so sprite's visible feet (2px above body bottom) land on tile surface
-      const zone = this.add.rectangle(gx + w/2, GROUND_Y + 66, w, 128, 0x000000, 0);
+      // Unsichtbarer Physik-Body: Oberkante exakt auf GROUND_Y
+      const zone = this.add.rectangle(gx + w/2, GROUND_Y + 64, w, 128, 0x000000, 0);
       this.physics.add.existing(zone, true);
       this.groundGroup.add(zone);
 
@@ -271,22 +271,23 @@ class GameScene extends Phaser.Scene {
     const { w, h } = large ? APFEL_LARGE : APFEL_SMALL;
     const feetY = this.player ? this.player.y : GROUND_Y;
 
-    // Body dimensions computed from DISPLAY size (not texture size!)
-    const bw = Math.round(w * 0.72);
-    const bh = Math.round(h * 0.88);
-    const ox = Math.round(w * 0.14);
-    const oy = Math.round(h * 0.12);
-
     this.player.setDisplaySize(w, h);
     this.player.setOrigin(0, 1);
     this.player.y = feetY;
 
-    this.player.body.setSize(bw, bh);
-    this.player.body.setOffset(ox, oy);
+    // WICHTIG: Arcade interpretiert setSize/setOffset in QUELL-Texturpixeln
+    // (hier ~169×229) und multipliziert intern mit der Sprite-Skalierung.
+    // Deshalb die Body-Maße als Bruchteil der Frame-Quellgröße angeben –
+    // das ist skalierungs-invariant und ergibt im Display die gewünschten %.
+    const fw = this.player.frame.realWidth;
+    const fh = this.player.frame.realHeight;
+    this.player.body.setSize(fw * 0.72, fh * 0.86, false);
+    this.player.body.setOffset(fw * 0.14, fh * 0.10);
 
-    // Sofort die Body-Position synchronisieren (nicht auf preUpdate warten)
-    this.player.body.x = this.player.x + ox;
-    this.player.body.y = feetY - h + oy;
+    // Body-Position sofort synchronisieren (Durchfallen beim Wachsen vermeiden)
+    // Body-Oberkante (Display) = Frame-Oberkante + 10% der Höhe
+    this.player.body.x = this.player.x + w * 0.14;
+    this.player.body.y = feetY - h * 0.90;
 
     const animMap = {
       small:      'apfel_small_run',
