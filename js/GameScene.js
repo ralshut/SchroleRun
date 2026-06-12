@@ -44,7 +44,8 @@ class GameScene extends Phaser.Scene {
     this.cfg.ground.forEach(([gx, tiles]) => {
       const w = tiles * TILE_SIZE;
       // Invisible physics body: top edge at GROUND_Y
-      const zone = this.add.rectangle(gx + w/2, GROUND_Y + 64, w, 128, 0x000000, 0);
+      // Zone top = GROUND_Y + 2 so sprite's visible feet (2px above body bottom) land on tile surface
+      const zone = this.add.rectangle(gx + w/2, GROUND_Y + 66, w, 128, 0x000000, 0);
       this.physics.add.existing(zone, true);
       this.groundGroup.add(zone);
 
