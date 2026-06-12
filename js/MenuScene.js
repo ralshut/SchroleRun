@@ -60,6 +60,14 @@ class MenuScene extends Phaser.Scene {
     this.load.image('flag_off', 'assets/images/sprites/tiles/flag_off.png');
     this.load.image('flag_red_a', 'assets/images/sprites/tiles/flag_red_a.png');
     this.load.image('flag_red_b', 'assets/images/sprites/tiles/flag_red_b.png');
+
+    // Sounds (Kenney New Platformer Pack)
+    this.load.audio('sfx_jump',      'assets/sounds/sfx_jump.ogg');
+    this.load.audio('sfx_coin',      'assets/sounds/sfx_coin.ogg');
+    this.load.audio('sfx_hurt',      'assets/sounds/sfx_hurt.ogg');
+    this.load.audio('sfx_magic',     'assets/sounds/sfx_magic.ogg');
+    this.load.audio('sfx_bump',      'assets/sounds/sfx_bump.ogg');
+    this.load.audio('sfx_disappear', 'assets/sounds/sfx_disappear.ogg');
   }
 
   create() {
