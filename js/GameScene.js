@@ -48,9 +48,7 @@ class GameScene extends Phaser.Scene {
       this.physics.add.existing(zone, true);
       this.groundGroup.add(zone);
 
-      // Tiles 8px nach oben, damit die flache Grasoberfläche
-      // auf GROUND_Y (Physik-Kollisionsebene) liegt
-      const TY = GROUND_Y - 8;
+      const TY = GROUND_Y;
       for (let i = 0; i < tiles; i++) {
         const tx = gx + i * TILE_SIZE;
         let topKey = `terrain_${theme}_block_top`;
@@ -80,7 +78,7 @@ class GameScene extends Phaser.Scene {
         if (tiles === 1)       platKey = `terrain_${theme}_horizontal_middle`;
         else if (i === 0)      platKey = `terrain_${theme}_horizontal_left`;
         else if (i === tiles-1) platKey = `terrain_${theme}_horizontal_right`;
-        this.add.image(tx, py - 8, platKey).setOrigin(0,0).setDisplaySize(TILE_SIZE, TILE_SIZE).setDepth(1);
+        this.add.image(tx, py, platKey).setOrigin(0,0).setDisplaySize(TILE_SIZE, TILE_SIZE).setDepth(1);
       }
     });
 
@@ -97,11 +95,11 @@ class GameScene extends Phaser.Scene {
     // ── Schorlen ──────────────────────────────────────────────────────────────
     this.schorleGroup = this.physics.add.group();
     this.cfg.schorleX.forEach(sx => {
-      const s = this.schorleGroup.create(sx, GROUND_Y - 8 - 46, 'schorle');
+      const s = this.schorleGroup.create(sx, GROUND_Y - 46, 'schorle');
       s.setDisplaySize(44, 58).setOrigin(0.5, 1).setDepth(2);
       s.body.allowGravity = false;
       s.body.setSize(36, 48);
-      s._baseY = GROUND_Y - 8 - 46;
+      s._baseY = GROUND_Y - 46;
       s._bobT  = 0;
     });
 
@@ -116,9 +114,9 @@ class GameScene extends Phaser.Scene {
     this.cfg.ground.forEach(([gx, tiles], idx) => {
       const w = tiles * TILE_SIZE;
       if (tiles >= 3)
-        this.add.image(gx + 96, GROUND_Y - 8, 'dec_bush').setOrigin(0.5,1).setDisplaySize(64,64).setDepth(2);
+        this.add.image(gx + 96, GROUND_Y, 'dec_bush').setOrigin(0.5,1).setDisplaySize(64,64).setDepth(2);
       if (tiles >= 5)
-        this.add.image(gx + w - 160, GROUND_Y - 8, 'dec_mushroom').setOrigin(0.5,1).setDisplaySize(48,48).setDepth(2);
+        this.add.image(gx + w - 160, GROUND_Y, 'dec_mushroom').setOrigin(0.5,1).setDisplaySize(48,48).setDepth(2);
     });
 
     // ── Enemies ───────────────────────────────────────────────────────────────
@@ -369,7 +367,7 @@ class GameScene extends Phaser.Scene {
     ) {
       const ex = this.cfg.enemyX[this.nextEnemyIdx++];
       if (ex > this.player.x - 100) {
-        const e = this.enemyGroup.create(ex, GROUND_Y - 8, 'elw_1');
+        const e = this.enemyGroup.create(ex, GROUND_Y, 'elw_1');
         e.setOrigin(0.5, 1).setDisplaySize(56, 64).setDepth(3).setFlipX(true);
         e.body.allowGravity = false;
         e.body.setSize(40, 56);
