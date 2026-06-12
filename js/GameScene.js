@@ -23,8 +23,10 @@ const FUEL_GAIN = 0.80;
 const JULIA_SCREEN_X     = 26;   // Julias Ruheposition am linken Rand
 const JULIA_INTRO        = 1.6;   // Sekunden, in denen sie ins Bild läuft
 const CATCH_DIST         = 54;    // erwischt, wenn Apfels linke Kante näher
-const PLAYER_MAX_SCREEN_X = 350;  // so weit darf Apfel nach rechts vorlaufen
-const PLAYER_START_X      = 210;  // komfortabler Startabstand zu Julia
+// Apfel darf höchstens bis zur Bildmitte vorlaufen – sonst sieht man die
+// kommenden Löcher zu spät und fällt sofort rein.
+const PLAYER_MAX_SCREEN_X = 225;  // = W/2
+const PLAYER_START_X      = 200;  // komfortabler Startabstand zu Julia
 
 // ── Sprung-Komfort ─────────────────────────────────────────────────────────
 const COYOTE      = 0.10;   // Gnadenfrist nach Verlassen des Bodens
@@ -162,7 +164,8 @@ class GameScene extends Phaser.Scene {
     // Läuft von links ins Bild und bleibt dann am linken Rand.
     this.julia = this.add.image(-80, GROUND_Y, 'julia')
       .setOrigin(0.5, 1).setDepth(4);
-    const jh = 190;                       // Höhe; Breite proportional (300×1125)
+    // Nicht größer als Apfel (groß = 90px hoch); Breite proportional (300×1125)
+    const jh = 84;
     this.julia.setDisplaySize(jh * 300 / 1125, jh);
 
     // ── Colliders & overlaps ──────────────────────────────────────────────────
