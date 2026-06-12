@@ -383,7 +383,9 @@ class GameScene extends Phaser.Scene {
     ) {
       const ex = this.cfg.enemyX[this.nextEnemyIdx++];
       if (ex > this.player.x - 100) {
-        const e = this.enemyGroup.create(ex, GROUND_Y, 'elw_1');
+        // +3px: Elwetrische-Sprites haben ~6px transparente Unterseite (176×138px),
+        // nach Skalierung auf 64px sind das ~3px → ohne Offset schweben sie 3px.
+        const e = this.enemyGroup.create(ex, GROUND_Y + 3, 'elw_1');
         e.setOrigin(0.5, 1).setDisplaySize(56, 64).setDepth(3).setFlipX(true);
         e.body.allowGravity = false;
         e.body.setSize(40, 56);
