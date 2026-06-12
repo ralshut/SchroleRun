@@ -267,8 +267,7 @@ class GameScene extends Phaser.Scene {
   // ── State / size ──────────────────────────────────────────────────────────
 
   _applyStateSize() {
-    const large = this.apfelState !== 'small';
-    const { w, h } = large ? APFEL_LARGE : APFEL_SMALL;
+    const { w, h } = (this.apfelState !== 'small') ? APFEL_LARGE : APFEL_SMALL;
     const feetY = this.player ? this.player.y : GROUND_Y;
 
     const animMap = {
@@ -277,26 +276,36 @@ class GameScene extends Phaser.Scene {
       largeHalf:  'apfel_large_half_run',
       largeEmpty: 'apfel_large_empty_run',
     };
-    // ZUERST die Animation starten, damit der korrekte Frame (und dessen
-    // Quellgröße) aktiv ist – klein 169×229, groß 325×434. Sonst wird die
-    // Skalierung am falschen Frame berechnet und der Apfel viel zu groß.
+    // Animation zuerst starten, damit der korrekte Frame aktiv ist.
     this.player.play(animMap[this.apfelState], true);
-
-    this.player.setDisplaySize(w, h);
-    this.player.setOrigin(0, 1);
     this.player.y = feetY;
 
-    // Arcade interpretiert setSize/setOffset in QUELL-Texturpixeln und
-    // multipliziert intern mit der Sprite-Skalierung. Body-Maße deshalb als
-    // Bruchteil der Frame-Quellgröße angeben – skalierungs-invariant.
+    // Größe + Body sperren (siehe _lockPlayerSize).
+    this._lockPlayerSize();
+
+    // Body-Position sofort synchronisieren (kein Durchfallen im ersten Frame).
+    this.player.body.x = this.player.x + w * 0.14;
+    this.player.body.y = feetY - h * 0.90;
+  }
+
+  // Sperrt Anzeigegröße UND Physik-Body – wird JEDEN Frame aufgerufen, weil
+  // die Apfel-Frames unterschiedliche Quellgrößen haben (klein ~169×229, groß
+  // bis 333×434 und pro Frame schwankend). Würde man nur einmal skalieren,
+  // wackelt die Anzeige und die Body-Unterkante wandert relativ zu den Füßen
+  // → er wird kurz gehalten und fällt dann durch. Durch erneutes
+  // setDisplaySize(w,h) pro Frame ist scaleY = h/frameHöhe und kürzt sich in
+  // der Body-Rechnung exakt weg:
+  //   Body-Höhe       = (frameHöhe·0.86) · (h/frameHöhe) = 0.86·h   (konstant)
+  //   Body-Unterkante = Füße − 0.04·h                              (konstant)
+  // also völlig frame-unabhängig.
+  _lockPlayerSize() {
+    const { w, h } = (this.apfelState !== 'small') ? APFEL_LARGE : APFEL_SMALL;
+    this.player.setDisplaySize(w, h);
+    this.player.setOrigin(0, 1);
     const fw = this.player.frame.realWidth;
     const fh = this.player.frame.realHeight;
     this.player.body.setSize(fw * 0.72, fh * 0.86, false);
     this.player.body.setOffset(fw * 0.14, fh * 0.10);
-
-    // Body-Position sofort synchronisieren (Durchfallen beim Wachsen vermeiden)
-    this.player.body.x = this.player.x + w * 0.14;
-    this.player.body.y = feetY - h * 0.90;
   }
 
   _die() {
@@ -326,6 +335,10 @@ class GameScene extends Phaser.Scene {
   update(time, delta) {
     if (this._gameOver) return;
     const dt = delta / 1000;
+
+    // Größe/Body jeden Frame sperren – Frame-Quellgrößen schwanken stark,
+    // sonst wandert die Body-Unterkante und der Apfel fällt durch den Boden.
+    this._lockPlayerSize();
 
     // Auto-run
     this.player.setVelocityX(this.cfg.scrollSpeed);
