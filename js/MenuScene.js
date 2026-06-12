@@ -77,30 +77,6 @@ class MenuScene extends Phaser.Scene {
     const title = this.add.image(W / 2, H / 2, 'title_screen');
     title.setDisplaySize(W, H);
 
-    // Dark overlay for readability
-    this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0.35);
-
-    // Logo
-    const logo = this.add.image(W / 2, 160, 'logo');
-    logo.setDisplaySize(Math.min(W * 0.7, logo.width), logo.height * (Math.min(W * 0.7, logo.width) / logo.width));
-
-    // Title text
-    this.add.text(W / 2, 300, 'SCHORLEMEISTER', {
-      fontFamily: 'Georgia, serif',
-      fontSize: '36px',
-      color: '#ffd54f',
-      stroke: '#000',
-      strokeThickness: 6,
-    }).setOrigin(0.5);
-
-    this.add.text(W / 2, 345, 'Jump \'n\' Run', {
-      fontFamily: 'Georgia, serif',
-      fontSize: '20px',
-      color: '#ffffff',
-      stroke: '#000',
-      strokeThickness: 4,
-    }).setOrigin(0.5);
-
     // Pulsing start text
     const startText = this.add.text(W / 2, H - 120, 'TIPPEN ZUM STARTEN', {
       fontFamily: 'Arial, sans-serif',
