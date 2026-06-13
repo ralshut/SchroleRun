@@ -289,8 +289,10 @@ class GameScene extends Phaser.Scene {
   _onSchorle(player, schorle) {
     schorle.destroy();
     this.fuel = 1;
-    // Kein Blinken beim Einsammeln – Wachsen soll sich gut anfühlen.
-    this._refreshStateFromFuel(true);
+    // WICHTIG: Größe NICHT hier ändern. Dieser Callback läuft mitten im
+    // Physik-Schritt; den Body hier zu vergrößern stört die Boden-Kollision
+    // und Apfel fällt durch den Boden. update() lässt ihn im nächsten Frame
+    // sauber (vor dem Physik-Schritt) wachsen. Kein Blinken beim Einsammeln.
     this.sound.play('sfx_magic', { volume: 0.8 });
   }
 
@@ -307,11 +309,11 @@ class GameScene extends Phaser.Scene {
     }
 
     // Treffer: kostet Schorle-Vorsprung und schubst Richtung Julia.
+    // Größe ebenfalls erst in update() ändern (nicht im Physik-Schritt).
     this.fuel = Math.max(0, this.fuel - ENEMY_FUEL_HIT);
     this.player.x -= 30;
     this.invTimer = INVINCE_DUR;
     this.flickerT = 0;
-    this._refreshStateFromFuel(true);
     this.sound.play('sfx_hurt', { volume: 0.9 });
     if (this.mode === 'jugger') enemy.destroy();
   }
