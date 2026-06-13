@@ -107,7 +107,7 @@ const LEVELS = [
     bgKey: 'party_bg',
     fgKey: 'party_fg',
     tileTheme: 'sand',
-    drain: 0.2,
+    drain: 0.23,
     ground: [
       [0, 10], [720, 6], [1300, 5], [1840, 7], [2520, 9],
       [3260, 6], [3820, 7], [4460, 6], [5020, 6], [5560, 12],
