@@ -9,10 +9,15 @@ class GameOverScene extends Phaser.Scene {
 
     this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0.78);
 
-    const headline = reason === 'caught' ? 'Julia hat dich!' : 'Apfel ist gefallen!';
-    const sub = reason === 'caught'
-      ? 'Ohne Schorle warst du zu langsam …'
-      : 'In die Pfalz-Lücke gestürzt!';
+    let headline = 'Apfel ist gefallen!';
+    let sub = 'In die Pfalz-Lücke gestürzt!';
+    if (reason === 'caught') {
+      headline = 'Julia hat dich!';
+      sub = 'Erwischt, bevor du Schorlemeister\nwerden konntest …';
+    } else if (reason === 'quiz') {
+      headline = 'Falsch gemischt!';
+      sub = 'Die Schorle ergoss sich über dich –\nProbe nicht bestanden.';
+    }
 
     this.add.text(W / 2, 250, headline, {
       fontFamily: 'Georgia, serif', fontSize: '34px', fontStyle: 'bold',

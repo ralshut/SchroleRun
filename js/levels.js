@@ -1,7 +1,9 @@
-// Die 5 Prüfungen des Schorlemeisters.
-// Apfel flieht vor Julia (die ihn zur Hochzeit "haben" will). Solange er
-// genug Schorle erwischt, bleibt er ihr voraus. Wer alle Prüfungen besteht,
-// ist Schorlemeister – und findet am Ende zu ihr.
+// Die Prüfungen des Schorlemeisters.
+// Apfel startet klein und flieht vor Julia. Julia holt auf – nur wer
+// rechtzeitig Schorle erwischt, wächst und bleibt ihr voraus. Wer alle
+// Prüfungen besteht, wird Schorlemeister und bekommt Julia.
+//
+// Schorle sind [x, y]-Paare. Bodennah y≈658, erhöht y≈540-600 (springen!).
 const LEVELS = [
   {
     title: 'Prüfung der Stärke',
@@ -12,12 +14,10 @@ const LEVELS = [
     bgKey: 'wald_bg',
     fgKey: 'wald_fg',
     tileTheme: 'grass',
-    // [x, tiles]  — each tile = 64px, ground top at GROUND_Y
     ground: [
       [0, 14], [960, 8], [1620, 6], [2160, 9],
       [2820, 7], [3400, 10], [4140, 5], [4520, 12],
     ],
-    // [x, y, tiles]
     platforms: [
       [1500, 580, 3], [2050, 600, 3], [2760, 560, 3],
       [3320, 600, 4], [4060, 560, 3],
@@ -25,14 +25,14 @@ const LEVELS = [
     enemyX: [1100, 1750, 2350, 2950, 3550, 4250, 4700],
     coins: [
       [520, 650], [600, 650], [680, 650],
-      [1540, 535], [1604, 535], [1668, 535],
+      [1540, 535], [1604, 535],
       [2300, 650], [2364, 650],
-      [2820, 515], [2884, 515],
-      [3380, 555], [3444, 555], [3508, 555],
+      [3380, 555], [3444, 555],
       [4080, 515], [4144, 515],
       [4600, 650], [4680, 650],
     ],
-    schorleX: [520, 1300, 2200, 3050, 3900, 4650],
+    // erste bodennah (Tutorial-Wachstum), danach erhöht
+    schorle: [[420, 658], [1560, 540], [2300, 560], [3150, 560], [3900, 590], [4600, 658]],
   },
   {
     title: 'Prüfung des Geistes',
@@ -44,125 +44,89 @@ const LEVELS = [
     fgKey: 'wein_fg',
     tileTheme: 'purple',
     ground: [
-      [0, 9], [680, 6], [1280, 5], [1850, 6], [2500, 5],
-      [3050, 7], [3700, 5], [4200, 6], [4750, 14],
+      [0, 9], [680, 6], [1280, 5], [1850, 6], [2440, 8],
+      [3120, 6], [3700, 5], [4200, 6], [4750, 14],
     ],
-    // Brückenpfeiler zum Drüberhüpfen
     platforms: [
-      [600, 600, 2], [1180, 560, 2], [1750, 600, 2], [2400, 560, 2],
-      [2950, 600, 2], [3600, 560, 2], [4100, 600, 2],
+      [600, 600, 2], [1180, 560, 2], [1750, 600, 2],
+      [3300, 560, 2], [3950, 600, 2], [4400, 560, 2],
     ],
-    enemyX: [900, 1500, 2050, 2700, 3250, 3900, 4400, 4950],
+    enemyX: [900, 1500, 2050, 3400, 3900, 4400, 4950],
     coins: [
       [300, 650], [380, 650],
-      [620, 555], [684, 555],
       [1200, 515], [1264, 515],
       [1770, 555], [1834, 555],
-      [2420, 515], [2484, 515],
-      [2970, 555], [3034, 555],
-      [3620, 515], [3684, 515],
-      [4120, 555], [4184, 555],
+      [3320, 515], [3384, 515],
+      [3970, 555], [4034, 555],
       [4900, 650], [4980, 650],
     ],
-    schorleX: [500, 1400, 2300, 3200, 4100, 5000],
-  },
-  {
-    title: 'Prüfung der schönen Künste',
-    subtitle: 'Die Jukebox im Biergarten',
-    scrollSpeed: 180,
-    levelWidth: 5800,
-    flagX: 5500,
-    bgKey: 'party_bg',
-    fgKey: 'party_fg',
-    tileTheme: 'sand',
-    ground: [
-      [0, 12], [860, 7], [1480, 8], [2160, 7],
-      [2780, 9], [3500, 7], [4100, 8], [4760, 14],
-    ],
-    platforms: [
-      [1000, 580, 3], [1600, 600, 4], [2300, 560, 3],
-      [2900, 600, 3], [3650, 560, 4], [4250, 600, 3],
-    ],
-    enemyX: [1100, 1700, 2400, 3000, 3700, 4350, 5000],
-    // viele Münzen = Applaus & Einwürfe für die Jukebox
-    coins: [
-      [200, 650], [280, 650], [360, 650], [440, 650],
-      [1020, 535], [1084, 535], [1148, 535],
-      [1640, 555], [1704, 555], [1768, 555], [1832, 555],
-      [2320, 515], [2384, 515], [2448, 515],
-      [2920, 555], [2984, 555],
-      [3680, 515], [3744, 515], [3808, 515],
-      [4280, 555], [4344, 555], [4408, 555],
-      [4900, 650], [4980, 650], [5060, 650],
-    ],
-    schorleX: [560, 1500, 2500, 3500, 4400, 5200],
+    schorle: [[480, 658], [1250, 540], [1980, 560], [3550, 560], [4300, 560], [5050, 658]],
+    // Brücken-Quiz: pausiert, Frage fällt von oben, falsch = verloren
+    quiz: {
+      x: 2300,
+      question: 'Brückenwächter: Wie mischt man\neine echte Pälzer Weinschorle?',
+      options: [
+        'Wein + Sprudelwasser',
+        'Wein + Cola',
+        'Wein + Bier',
+        'Nur Wein, kein Wasser',
+      ],
+      correct: 0,
+    },
   },
   {
     title: 'Jugger-Turnier',
-    subtitle: 'Pompfen, Kette und kein Pardon',
-    scrollSpeed: 200,
-    levelWidth: 6200,
-    flagX: 5900,
-    bgKey: 'wein_bg',
-    fgKey: 'wein_fg',
-    tileTheme: 'purple',
-    ground: [
-      [0, 11], [800, 6], [1380, 7], [2020, 6], [2580, 8],
-      [3260, 6], [3820, 7], [4460, 6], [5020, 5], [5440, 13],
+    subtitle: 'Kette, Kampfstern – tippe die Gegner!',
+    scrollSpeed: 165,
+    levelWidth: 5200,
+    flagX: 4950,
+    bgKey: 'party_bg',
+    fgKey: 'party_fg',
+    tileTheme: 'sand',
+    mode: 'jugger',
+    // flacher Boden, keine Löcher
+    ground: [[0, 82]],
+    platforms: [],
+    enemyX: [
+      700, 980, 1240, 1520, 1800, 2080, 2360, 2660,
+      2960, 3260, 3560, 3860, 4160, 4460, 4760,
     ],
-    platforms: [
-      [900, 580, 2], [1450, 600, 3], [2100, 560, 2], [2680, 600, 3],
-      [3340, 560, 2], [3900, 600, 3], [4540, 560, 2], [5100, 600, 2],
-    ],
-    // Das gegnerische Team – viele Gegner
-    enemyX: [700, 1050, 1450, 1850, 2150, 2650, 3000, 3350,
-             3900, 4250, 4600, 5050, 5500],
     coins: [
-      [300, 650], [380, 650],
-      [920, 535], [984, 535],
-      [1470, 555], [1534, 555],
-      [2120, 515], [2184, 515],
-      [2700, 555], [2764, 555],
-      [3360, 515], [3424, 515],
-      [3920, 555], [3984, 555],
-      [4560, 515], [4624, 515],
-      [5300, 650], [5380, 650],
+      [520, 650], [600, 650], [1100, 650], [1700, 650],
+      [2300, 650], [2900, 650], [3500, 650], [4100, 650], [4700, 650],
     ],
-    schorleX: [520, 1500, 2500, 3500, 4500, 5500],
+    // bodennah, weil im Jugger nicht gesprungen wird
+    schorle: [[420, 658], [1400, 658], [2400, 658], [3400, 658], [4400, 658]],
   },
   {
     title: 'Prüfung des Willens',
     subtitle: 'Die Nacht der Weingöttin',
-    scrollSpeed: 220,
-    levelWidth: 6600,
-    flagX: 6300,
+    scrollSpeed: 195,
+    levelWidth: 6200,
+    flagX: 5900,
     bgKey: 'party_bg',
     fgKey: 'party_fg',
     tileTheme: 'sand',
+    drain: 0.2,
     ground: [
-      [0, 10], [720, 6], [1300, 5], [1840, 7], [2520, 5],
-      [3060, 6], [3640, 5], [4180, 7], [4860, 5], [5400, 5], [5840, 13],
+      [0, 10], [720, 6], [1300, 5], [1840, 7], [2520, 9],
+      [3260, 6], [3820, 7], [4460, 6], [5020, 6], [5560, 12],
     ],
     platforms: [
-      [820, 580, 2], [1400, 560, 2], [1980, 600, 2], [2620, 560, 2],
-      [3180, 600, 2], [3760, 560, 2], [4300, 600, 2], [4980, 560, 2],
-      [5520, 600, 2],
+      [820, 580, 2], [1400, 560, 2], [1980, 600, 2],
+      [3900, 600, 2], [4500, 560, 2], [5100, 560, 2],
     ],
-    enemyX: [650, 1000, 1400, 1900, 2350, 2750, 3200, 3700,
-             4250, 4750, 5250, 5700, 6100],
+    enemyX: [650, 1000, 1400, 1900, 2350, 3400, 3900, 4500, 5100, 5600],
     coins: [
       [260, 650], [340, 650],
-      [840, 555], [904, 555],
       [1420, 535], [1484, 535],
       [2000, 575], [2064, 575],
-      [2640, 535], [2704, 535],
-      [3200, 575], [3264, 575],
-      [3780, 535], [3844, 535],
-      [4320, 575], [4384, 575],
-      [5000, 535], [5064, 535],
-      [5700, 650], [5780, 650],
+      [3920, 575], [3984, 575],
+      [4520, 535], [4584, 535],
+      [5650, 650], [5730, 650],
     ],
-    // Test des Willens: Schorle sitzt knapper
-    schorleX: [800, 2000, 3300, 4600, 5800],
+    schorle: [[460, 658], [1380, 540], [2000, 560], [3400, 560], [4500, 560], [5650, 658]],
+    // Pokahontas-Versuchung: Julia verschwindet, Apfel wird gefesselt
+    temptation: { x: 2780 },
   },
 ];

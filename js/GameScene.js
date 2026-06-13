@@ -1,36 +1,34 @@
 const GROUND_Y    = 704;
 const TILE_SIZE   = 64;
-const BASE_JUMP   = -420;
-const HOLD_BOOST  = -350;
-const MAX_HOLD    = 0.4;
-const TERM_VEL    = 700;
+const BASE_JUMP   = -520;   // mehr Sprungkraft (war -420)
+const HOLD_BOOST  = -380;
+const MAX_HOLD    = 0.42;
+const TERM_VEL    = 760;
 
 // ── Schorle-Treibstoff = Vorsprung vor Julia ───────────────────────────────
-// Voll = Apfel groß & schnell, bleibt ihr voraus. Leer = klein & langsam,
-// er fällt zum linken Bildrand zurück, wo Julia ihn schnappt.
-const FUEL_START      = 0.9;
-const FUEL_DRAIN      = 0.05;    // pro Sekunde
-const ENEMY_FUEL_HIT  = 0.30;    // Treffer kostet ~eine Stufe
-const INVINCE_DUR     = 0.6;
+// Apfel startet KLEIN (wenig fuel). Schorle füllt voll auf → er wächst und
+// zieht davon. Ohne Schorle verliert er EXPONENTIELL an Tempo (erst schnell,
+// dann langsamer) und fällt zu Julia zurück.
+const FUEL_START   = 0.12;   // klein zu Beginn
+const FUEL_DRAIN_K = 0.16;   // exponentieller Zerfall pro Sekunde (Standard)
+const ENEMY_FUEL_HIT = 0.30;
+const INVINCE_DUR  = 0.6;
 
-// Lauftempo = scrollSpeed · (FUEL_BASE + FUEL_GAIN·fuel).
-// Gleichgewicht (Tempo = Welt) liegt bei halbem Pegel: über der Hälfte
-// gewinnt Apfel Boden, darunter fällt er zu Julia zurück.
+// Lauftempo = scrollSpeed · (FUEL_BASE + FUEL_GAIN·fuel). Gleichgewicht bei
+// halbem Pegel: darüber gewinnt Apfel Boden, darunter fällt er zurück.
 const FUEL_BASE = 0.60;
 const FUEL_GAIN = 0.80;
 
 // ── Verfolgung ─────────────────────────────────────────────────────────────
-const JULIA_SCREEN_X     = 26;   // Julias Ruheposition am linken Rand
-const JULIA_INTRO        = 1.6;   // Sekunden, in denen sie ins Bild läuft
-const CATCH_DIST         = 54;    // erwischt, wenn Apfels linke Kante näher
-// Apfel darf höchstens bis zur Bildmitte vorlaufen – sonst sieht man die
-// kommenden Löcher zu spät und fällt sofort rein.
-const PLAYER_MAX_SCREEN_X = 225;  // = W/2
-const PLAYER_START_X      = 200;  // komfortabler Startabstand zu Julia
+const JULIA_SCREEN_X     = 26;
+const JULIA_INTRO        = 1.6;
+const CATCH_DIST         = 54;
+const PLAYER_MAX_SCREEN_X = 225;  // höchstens bis Bildmitte (W/2) vorlaufen
+const PLAYER_START_X      = 240;
 
 // ── Sprung-Komfort ─────────────────────────────────────────────────────────
-const COYOTE      = 0.10;   // Gnadenfrist nach Verlassen des Bodens
-const JUMP_BUFFER = 0.13;   // gepufferter Tap kurz vor der Landung
+const COYOTE      = 0.10;
+const JUMP_BUFFER = 0.13;
 
 const APFEL_SMALL = { w: 56, h: 70 };
 const APFEL_LARGE = { w: 72, h: 90 };
@@ -42,9 +40,11 @@ class GameScene extends Phaser.Scene {
     this.levelIdx       = data.level ?? 0;
     this.totalCoins     = data.totalCoins ?? 0;
     this.cfg            = LEVELS[this.levelIdx];
+    this.mode           = this.cfg.mode ?? 'run';
+    this.drainK         = this.cfg.drain ?? FUEL_DRAIN_K;
     this._gameOver      = false;
     this._flagTriggered = false;
-    this.apfelState     = 'largeFull';
+    this.apfelState     = 'small';
     this.fuel           = FUEL_START;
     this.invTimer       = 0;
     this.flickerT       = 0;
@@ -54,10 +54,16 @@ class GameScene extends Phaser.Scene {
     this.nextEnemyIdx   = 0;
     this._dying         = false;
 
-    // Verfolgungs-/Autoscroll-Zustand
     this.coyoteTimer    = 0;
     this.jumpBuffer     = 0;
     this.juliaIntroT    = 0;
+
+    // Interaktions-Pause (Quiz / Versuchung)
+    this._pause       = false;
+    this._quizActive  = false;
+    this._quizDone    = false;
+    this._tempActive  = false;
+    this._tempDone    = false;
 
     const W = 450, H = 800;
     this.worldScroll = 0;
@@ -122,14 +128,14 @@ class GameScene extends Phaser.Scene {
       coin.play('coin_spin');
     });
 
-    // ── Schorlen ──────────────────────────────────────────────────────────────
+    // ── Schorlen ([x,y]-Paare) ─────────────────────────────────────────────────
     this.schorleGroup = this.physics.add.group();
-    this.cfg.schorleX.forEach(sx => {
-      const s = this.schorleGroup.create(sx, GROUND_Y - 46, 'schorle');
+    (this.cfg.schorle || []).forEach(([sx, sy]) => {
+      const s = this.schorleGroup.create(sx, sy, 'schorle');
       s.setDisplaySize(44, 58).setOrigin(0.5, 1).setDepth(2);
       s.body.allowGravity = false;
       s.body.setSize(36, 48);
-      s._baseY = GROUND_Y - 46;
+      s._baseY = sy;
       s._bobT  = 0;
     });
 
@@ -154,18 +160,24 @@ class GameScene extends Phaser.Scene {
     this._createAnimations();
 
     // ── Player ────────────────────────────────────────────────────────────────
-    this.player = this.physics.add.sprite(PLAYER_START_X, GROUND_Y, 'apfel_large_full_1');
+    this.player = this.physics.add.sprite(PLAYER_START_X, GROUND_Y, 'apfel_small_1');
     this.player.setOrigin(0, 1).setDepth(3);
     this.player.setMaxVelocity(800, TERM_VEL);
     this.player.body.setCollideWorldBounds(false);
     this._applyStateSize();
 
+    // ── Kampfstern (nur Jugger) ────────────────────────────────────────────────
+    if (this.mode === 'jugger') {
+      this.chainGfx = this.add.graphics().setDepth(2);
+      this.star = this.add.image(this.player.x, GROUND_Y - 40, 'kampfstern')
+        .setDisplaySize(34, 34).setDepth(4);
+      this._swing = 0;
+    }
+
     // ── Julia – die Verfolgerin ────────────────────────────────────────────────
-    // Läuft von links ins Bild und bleibt dann am linken Rand.
     this.julia = this.add.image(-80, GROUND_Y, 'julia')
       .setOrigin(0.5, 1).setDepth(4);
-    // Nicht größer als Apfel (groß = 90px hoch); Breite proportional (300×1125)
-    const jh = 84;
+    const jh = 82;
     this.julia.setDisplaySize(jh * 300 / 1125, jh);
 
     // ── Colliders & overlaps ──────────────────────────────────────────────────
@@ -178,7 +190,7 @@ class GameScene extends Phaser.Scene {
     this.physics.add.overlap(this.player, this.schorleGroup, this._onSchorle, null, this);
     this.physics.add.overlap(this.player, this.enemyGroup,   this._onEnemy,   null, this);
 
-    // ── Camera (Autoscroll – folgt NICHT dem Spieler) ──────────────────────────
+    // ── Camera (Autoscroll) ────────────────────────────────────────────────────
     this.cameras.main.setBounds(0, 0, this.cfg.levelWidth, H);
     this.cameras.main.scrollX = 0;
 
@@ -226,12 +238,14 @@ class GameScene extends Phaser.Scene {
       this.anims.create({ key:'flag_wave', frames:[{ key:'flag_red_a'},{ key:'flag_red_b'}], frameRate:5, repeat:-1 });
   }
 
-  // ── Input ─────────────────────────────────────────────────────────────────
+  // ── Input-Router ────────────────────────────────────────────────────────────
 
-  _onPointerDown() {
+  _onPointerDown(pointer) {
     if (this._gameOver || this._dying) return;
-    // Sprung puffern – die eigentliche Auslösung passiert in update(), sobald
-    // Coyote-Zeit + Puffer zusammenpassen. Das verhindert verschluckte Sprünge.
+    if (this._quizActive) return;            // Quiz-Buttons regeln das selbst
+    if (this._tempActive) return;            // nur das Antippen von Pokahontas zählt
+    if (this.mode === 'jugger') { this._attack(); return; }
+    // Lauf-Modus: Sprung puffern
     this.jumpBuffer = JUMP_BUFFER;
     this.tapHeld = true;
   }
@@ -248,6 +262,22 @@ class GameScene extends Phaser.Scene {
     }
   }
 
+  // ── Jugger-Angriff: tippen zerschlägt den vordersten Gegner in Reichweite ───
+  _attack() {
+    this._swing = 0.22;
+    this.sound.play('sfx_bump', { volume: 0.7 });
+    let best = null, bestX = Infinity;
+    this.enemyGroup.getChildren().forEach(e => {
+      if (!e.active) return;
+      const dx = e.x - this.player.x;
+      if (dx > -40 && dx < 190 && e.x < bestX) { best = e; bestX = e.x; }
+    });
+    if (best) {
+      best.destroy();
+      this.sound.play('sfx_disappear', { volume: 0.5 });
+    }
+  }
+
   // ── Overlap callbacks ─────────────────────────────────────────────────────
 
   _onCoin(player, coin) {
@@ -258,7 +288,6 @@ class GameScene extends Phaser.Scene {
 
   _onSchorle(player, schorle) {
     schorle.destroy();
-    // Schorle füllt den Vorsprung wieder voll auf.
     this.fuel = 1;
     this.invTimer = Math.max(this.invTimer, 0.2);
     this._refreshStateFromFuel(true);
@@ -266,23 +295,25 @@ class GameScene extends Phaser.Scene {
   }
 
   _onEnemy(player, enemy) {
-    if (this.invTimer > 0 || this._dying) return;
+    if (this.invTimer > 0 || this._dying || this._pause) return;
 
-    // Stomp: von oben drauf – Gegner besiegt, kein Schaden.
-    if (player.body.velocity.y > 20 && player.body.bottom <= enemy.body.top + 24) {
+    // Stomp (nur Lauf-Modus)
+    if (this.mode !== 'jugger' &&
+        player.body.velocity.y > 20 && player.body.bottom <= enemy.body.top + 24) {
       enemy.destroy();
       this.player.setVelocityY(-300);
       this.sound.play('sfx_bump', { volume: 0.8 });
       return;
     }
 
-    // Seitlicher Treffer: kostet Schorle-Vorsprung und schubst Richtung Julia.
+    // Treffer: kostet Schorle-Vorsprung und schubst Richtung Julia.
     this.fuel = Math.max(0, this.fuel - ENEMY_FUEL_HIT);
     this.player.x -= 30;
     this.invTimer = INVINCE_DUR;
     this.flickerT = 0;
     this._refreshStateFromFuel(true);
     this.sound.play('sfx_hurt', { volume: 0.9 });
+    if (this.mode === 'jugger') enemy.destroy();
   }
 
   // ── State / size ──────────────────────────────────────────────────────────
@@ -294,9 +325,6 @@ class GameScene extends Phaser.Scene {
     return 'small';
   }
 
-  // Leitet den Sicht-/Größenzustand aus dem Schorle-Pegel ab. Nur bei echtem
-  // Wechsel wird die Animation neu gestartet (force=true erzwingt es z. B.
-  // nach einem Schorle-Pickup).
   _refreshStateFromFuel(force = false) {
     const ns = this._stateFromFuel(this.fuel);
     if (ns !== this.apfelState || force) {
@@ -316,9 +344,6 @@ class GameScene extends Phaser.Scene {
     this._lockPlayerSize();
   }
 
-  // Sperrt Anzeigegröße UND Physik-Body jeden Frame – die Apfel-Frames haben
-  // unterschiedliche Quellgrößen; durch setDisplaySize(w,h) je Frame kürzt
-  // sich die Skalierung in der Body-Rechnung exakt weg (Body-Höhe = 0.86·h).
   _lockPlayerSize() {
     const { w, h } = (this.apfelState !== 'small') ? APFEL_LARGE : APFEL_SMALL;
     this.player.setDisplaySize(w, h);
@@ -329,39 +354,166 @@ class GameScene extends Phaser.Scene {
     this.player.body.setOffset(fw * 0.14, fh * 0.10);
   }
 
-  // ── Verlieren / Gewinnen ────────────────────────────────────────────────────
+  // ── Brücken-Quiz ────────────────────────────────────────────────────────────
 
-  _caught() {
-    if (this._gameOver) return;
-    this._gameOver = true;
-    this._dying    = true;
-    this._removeInput();
-    this.player.setVelocityX(0);
-    this.sound.play('sfx_hurt', { volume: 0.9 });
-    this.time.delayedCall(900, () => {
-      this.scene.stop('HudScene');
-      this.scene.start('GameOverScene', {
-        level: this.levelIdx,
-        totalCoins: this.totalCoins + this.coinsCollected,
-        reason: 'caught',
+  _startQuiz() {
+    this._quizActive = true;
+    this._pause = true;
+    this.player.setVelocity(0, 0);
+    this.tapHeld = false;
+
+    // Brückenwächter (kleines Männchen) auf der Brücke
+    this._waechter = this.add.image(this.player.x + 150, GROUND_Y, 'apfel_small_1')
+      .setOrigin(0.5, 1).setDisplaySize(48, 60).setDepth(3)
+      .setFlipX(true).setTint(0x88dd88);
+
+    const W = 450;
+    const q = this.cfg.quiz;
+    const ui = [];
+    const dim = this.add.rectangle(W/2, 400, W, 800, 0x000000, 0.55)
+      .setScrollFactor(0).setDepth(20);
+    ui.push(dim);
+
+    // Frage fällt von oben
+    const qTxt = this.add.text(W/2, -60, q.question, {
+      fontFamily: 'Georgia, serif', fontSize: '21px', fontStyle: 'bold',
+      color: '#ffd54f', stroke: '#000', strokeThickness: 5, align: 'center',
+      wordWrap: { width: 410 },
+    }).setScrollFactor(0).setOrigin(0.5).setDepth(21);
+    ui.push(qTxt);
+    this.tweens.add({ targets: qTxt, y: 150, duration: 700, ease: 'Bounce.easeOut' });
+
+    q.options.forEach((opt, i) => {
+      const y = 300 + i * 78;
+      const bg = this.add.rectangle(W/2, y, 380, 60, 0x3b2a55, 0.95)
+        .setStrokeStyle(3, 0xffd54f).setScrollFactor(0).setDepth(21)
+        .setInteractive({ useHandCursor: true });
+      const tx = this.add.text(W/2, y, opt, {
+        fontFamily: 'Arial, sans-serif', fontSize: '20px', fontStyle: 'bold',
+        color: '#ffffff', align: 'center', wordWrap: { width: 360 },
+      }).setScrollFactor(0).setOrigin(0.5).setDepth(22);
+      bg.on('pointerover', () => bg.setFillStyle(0x5a4080, 0.95));
+      bg.on('pointerout',  () => bg.setFillStyle(0x3b2a55, 0.95));
+      bg.on('pointerdown', () => this._answerQuiz(i));
+      ui.push(bg, tx);
+    });
+
+    this._quizUI = ui;
+  }
+
+  _answerQuiz(idx) {
+    if (!this._quizActive) return;
+    const correct = idx === this.cfg.quiz.correct;
+    this._quizActive = false;
+    this._quizUI.forEach(o => o.destroy());
+    if (this._waechter) { this._waechter.destroy(); this._waechter = null; }
+
+    if (correct) {
+      this._quizDone = true;
+      this._pause = false;
+      this.sound.play('sfx_magic', { volume: 0.8 });
+      const t = this.add.text(225, 200, 'Richtig! Weiter geht\'s!', {
+        fontFamily: 'Georgia, serif', fontSize: '26px', fontStyle: 'bold',
+        color: '#88ff88', stroke: '#000', strokeThickness: 5,
+      }).setScrollFactor(0).setOrigin(0.5).setDepth(22);
+      this.time.delayedCall(900, () => t.destroy());
+    } else {
+      // Schorle ergießt sich über Apfel → Level verloren
+      this.sound.play('sfx_hurt', { volume: 0.9 });
+      const splash = this.add.image(this.player.x + 8, GROUND_Y - 260, 'schorle')
+        .setOrigin(0.5, 1).setDisplaySize(70, 92).setDepth(12);
+      this.tweens.add({
+        targets: splash, y: GROUND_Y - 40, duration: 600, ease: 'Quad.easeIn',
+        onComplete: () => {
+          this.player.setTint(0x66aaff);
+          this._lose('quiz');
+        },
       });
+    }
+  }
+
+  // ── Prüfung des Willens: Pokahontas ─────────────────────────────────────────
+
+  _startTemptation() {
+    this._tempActive = true;
+    this._pause = true;
+    this.player.setVelocity(0, 0);
+    this.tapHeld = false;
+    this.julia.setVisible(false);   // Julia verschwindet
+
+    // Pfahl + Fesseln
+    this._pfahl = this.add.rectangle(this.player.x + 12, GROUND_Y - 50, 14, 100, 0x6b4a2a)
+      .setOrigin(0.5, 1).setDepth(2);
+    this._fessel = this.add.graphics().setDepth(4);
+    this._fessel.lineStyle(4, 0xd8c089, 1);
+    for (let k = 0; k < 3; k++) {
+      const yy = GROUND_Y - 90 + k * 26;
+      this._fessel.strokeRoundedRect(this.player.x - 6, yy, 40, 10, 5);
+    }
+
+    // Pokahontas tanzt vor Apfel
+    this._clothes = 4;
+    this._poka = this.add.image(this.player.x + 110, GROUND_Y, 'pokahontas_4')
+      .setOrigin(0.5, 1).setDisplaySize(96, 200).setDepth(5)
+      .setInteractive({ useHandCursor: true });
+    this._poka.on('pointerdown', () => this._undressTap());
+    this._pokaDance = this.tweens.add({
+      targets: this._poka, angle: { from: -5, to: 5 },
+      duration: 380, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+    });
+
+    this._tempHint = this.add.text(225, 150, 'Widerstehe der Versuchung –\ntippe die Tänzerin!', {
+      fontFamily: 'Georgia, serif', fontSize: '20px', fontStyle: 'bold',
+      color: '#ffd54f', stroke: '#000', strokeThickness: 5, align: 'center',
+    }).setScrollFactor(0).setOrigin(0.5).setDepth(22);
+  }
+
+  _undressTap() {
+    if (!this._tempActive || this._clothes <= 0) return;
+    this._clothes--;
+    this._poka.setTexture(`pokahontas_${this._clothes}`);
+    this.sound.play('sfx_coin', { volume: 0.5 });
+    if (this._clothes <= 0) this._endTemptation();
+  }
+
+  _endTemptation() {
+    // Pokahontas verschwindet, Julia kehrt zurück, es geht weiter.
+    this.sound.play('sfx_disappear', { volume: 0.8 });
+    if (this._pokaDance) this._pokaDance.stop();
+    this._tempHint.setText('Bestanden!');
+    this.tweens.add({
+      targets: this._poka, alpha: 0, scaleY: 0, duration: 700,
+      onComplete: () => {
+        [this._poka, this._pfahl, this._fessel, this._tempHint].forEach(o => o && o.destroy());
+        this._poka = this._pfahl = this._fessel = this._tempHint = null;
+        this._tempActive = false;
+        this._tempDone   = true;
+        this.julia.setVisible(true);
+        this._pause = false;
+      },
     });
   }
 
-  _fell() {
+  // ── Verlieren / Gewinnen ────────────────────────────────────────────────────
+
+  _lose(reason) {
     if (this._gameOver) return;
     this._gameOver = true;
     this._dying    = true;
     this._removeInput();
     this.player.setVelocityX(0);
-    this.player.setTint(0xff4444);
-    this.sound.play('sfx_disappear', { volume: 0.9 });
-    this.time.delayedCall(1100, () => {
+    if (reason === 'fell') {
+      this.player.setTint(0xff4444);
+      this.sound.play('sfx_disappear', { volume: 0.9 });
+    } else if (reason !== 'quiz') {
+      this.sound.play('sfx_hurt', { volume: 0.9 });
+    }
+    this.time.delayedCall(reason === 'fell' ? 1100 : 1000, () => {
       this.scene.stop('HudScene');
       this.scene.start('GameOverScene', {
         level: this.levelIdx,
         totalCoins: this.totalCoins + this.coinsCollected,
-        reason: 'fell',
+        reason,
       });
     });
   }
@@ -391,45 +543,56 @@ class GameScene extends Phaser.Scene {
   // ── Update ────────────────────────────────────────────────────────────────
 
   update(time, delta) {
-    if (this._gameOver) {
-      this._lockPlayerSize();
-      return;
-    }
+    if (this._gameOver) { this._lockPlayerSize(); return; }
     const dt = delta / 1000;
-
-    // Größe/Body jeden Frame sperren (Frame-Quellgrößen schwanken).
     this._lockPlayerSize();
 
-    // ── Autoscroll: Welt zieht mit konstantem Tempo nach rechts ──────────────
+    // Während Quiz/Versuchung: alles eingefroren, nur Kamera/Animationen ruhen.
+    if (this._pause) {
+      this.player.setVelocityX(0);
+      this.cameras.main.scrollX = this.worldScroll;
+      return;
+    }
+
+    // ── Quiz / Versuchung auslösen ───────────────────────────────────────────
+    if (this.cfg.quiz && !this._quizDone && !this._quizActive &&
+        this.worldScroll >= this.cfg.quiz.x) { this._startQuiz(); return; }
+    if (this.cfg.temptation && !this._tempDone && !this._tempActive &&
+        this.worldScroll >= this.cfg.temptation.x) { this._startTemptation(); return; }
+
+    // ── Autoscroll ───────────────────────────────────────────────────────────
     this.worldScroll = Math.min(this.worldScroll + this.cfg.scrollSpeed * dt, this.maxScroll);
     this.cameras.main.scrollX = this.worldScroll;
 
-    // ── Schorle-Pegel sinkt stetig; Größe/Tempo folgen ───────────────────────
-    this.fuel = Math.max(0, this.fuel - FUEL_DRAIN * dt);
+    // ── Schorle-Pegel: exponentieller Zerfall (erst schnell, dann langsam) ────
+    this.fuel = Math.max(0, this.fuel - this.fuel * this.drainK * dt);
     this._refreshStateFromFuel();
 
-    // Lauftempo abhängig vom Schorle-Vorsprung: voll → schneller als die Welt
-    // (gewinnt Boden), leer → langsamer (fällt nach links zu Julia zurück).
     const factor = FUEL_BASE + FUEL_GAIN * this.fuel;
     this.player.setVelocityX(this.cfg.scrollSpeed * factor);
 
-    // Coyote-Zeit + gepufferter Sprung
+    // ── Sprung (nicht im Jugger) ─────────────────────────────────────────────
     const onGround = this.player.body.blocked.down || this.player.body.touching.down;
     this.coyoteTimer = onGround ? COYOTE : Math.max(0, this.coyoteTimer - dt);
     if (this.jumpBuffer > 0) this.jumpBuffer -= dt;
-    this._tryJump();
-
-    // Hold-boost in der Luft
-    if (this.tapHeld && !onGround) {
-      this.holdTime += dt;
-      if (this.holdTime < MAX_HOLD) {
-        this.player.body.velocity.y = Math.max(
-          this.player.body.velocity.y + HOLD_BOOST * dt, BASE_JUMP
-        );
+    if (this.mode !== 'jugger') {
+      this._tryJump();
+      if (this.tapHeld && !onGround) {
+        this.holdTime += dt;
+        if (this.holdTime < MAX_HOLD) {
+          this.player.body.velocity.y = Math.max(
+            this.player.body.velocity.y + HOLD_BOOST * dt, BASE_JUMP
+          );
+        }
       }
     }
 
-    // Apfel darf nicht aus dem rechten Bildrand laufen
+    // ── Kampfstern (Jugger) ──────────────────────────────────────────────────
+    if (this.mode === 'jugger') {
+      this._updateStar(dt);
+    }
+
+    // Nicht über die Bildmitte hinaus
     const screenX = this.player.x - this.worldScroll;
     if (screenX > PLAYER_MAX_SCREEN_X) {
       this.player.x = this.worldScroll + PLAYER_MAX_SCREEN_X;
@@ -437,7 +600,7 @@ class GameScene extends Phaser.Scene {
         this.player.setVelocityX(this.cfg.scrollSpeed);
     }
 
-    // ── Julia: erst ins Bild laufen, dann am linken Rand bleiben ──────────────
+    // ── Julia ────────────────────────────────────────────────────────────────
     this.juliaIntroT += dt;
     let jsx = JULIA_SCREEN_X;
     if (this.juliaIntroT < JULIA_INTRO)
@@ -445,16 +608,11 @@ class GameScene extends Phaser.Scene {
     this.julia.x = this.worldScroll + jsx;
     this.julia.y = GROUND_Y + Math.sin(time / 110) * 4;
 
-    // Erwischt? (erst wenn sie wirklich im Bild ist)
     if (this.juliaIntroT >= JULIA_INTRO && (this.player.x - this.worldScroll) < CATCH_DIST) {
-      this._caught();
-      return;
+      this._lose('caught'); return;
     }
 
-    // Absturz in eine Lücke
-    if (this.player.y > 1100) { this._fell(); return; }
-
-    // Ziel erreicht → Prüfung bestanden
+    if (this.player.y > 1100) { this._lose('fell'); return; }
     if (this.worldScroll >= this.maxScroll - 1) { this._win(); return; }
 
     // ── Unverwundbarkeits-Flackern ───────────────────────────────────────────
@@ -465,7 +623,7 @@ class GameScene extends Phaser.Scene {
       if (this.invTimer <= 0) this.player.setAlpha(1);
     }
 
-    // ── Feinde spawnen ───────────────────────────────────────────────────────
+    // ── Feinde ───────────────────────────────────────────────────────────────
     while (
       this.nextEnemyIdx < this.cfg.enemyX.length &&
       this.cfg.enemyX[this.nextEnemyIdx] < this.worldScroll + 900
@@ -494,5 +652,19 @@ class GameScene extends Phaser.Scene {
     // ── Parallax ─────────────────────────────────────────────────────────────
     this.bgSprite.tilePositionX = this.worldScroll * 0.2;
     this.fgSprite.tilePositionX = this.worldScroll * 0.5;
+  }
+
+  // Kampfstern an einer Kette: hängt am Apfel, schwingt beim Angriff nach vorn.
+  _updateStar(dt) {
+    if (this._swing > 0) this._swing = Math.max(0, this._swing - dt);
+    const handX = this.player.x + 40;
+    const handY = GROUND_Y - 52;
+    const swung = this._swing > 0;
+    const sx = swung ? handX + 120 : handX + 30;
+    const sy = swung ? handY + 6   : handY + 34;
+    this.star.setPosition(sx, sy).setDepth(4);
+    this.chainGfx.clear();
+    this.chainGfx.lineStyle(3, 0x999999, 1);
+    this.chainGfx.lineBetween(handX, handY, sx, sy);
   }
 }

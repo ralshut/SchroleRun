@@ -23,7 +23,7 @@ class WinScene extends Phaser.Scene {
         color: '#ffffff', stroke: '#000', strokeThickness: 5,
       }).setOrigin(0.5);
 
-      this.add.text(W / 2, 640, 'Apfel hört auf zu fliehen –\nund findet zu Julia. 🍷❤️', {
+      this.add.text(W / 2, 640, 'Apfel ist Schorlemeister –\nund bekommt Julia! 🍷❤️', {
         fontFamily: 'Georgia, serif', fontSize: '22px', fontStyle: 'bold',
         color: '#ffd54f', stroke: '#000', strokeThickness: 6, align: 'center',
       }).setOrigin(0.5);

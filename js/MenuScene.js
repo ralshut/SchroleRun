@@ -33,6 +33,13 @@ class MenuScene extends Phaser.Scene {
     // Julia – die Verfolgerin (aus dem Poster montiert)
     this.load.image('julia', 'assets/images/sprites/enemies/julia_chase.png');
 
+    // Pokahontas – Prüfung des Willens (5 Zustände)
+    for (let i = 0; i <= 4; i++)
+      this.load.image(`pokahontas_${i}`, `assets/images/sprites/enemies/pokahontas_${i}.png`);
+
+    // Kampfstern – Jugger-Turnier
+    this.load.image('kampfstern', 'assets/images/sprites/items/kampfstern.png');
+
     // Coins
     this.load.image('coin_1', 'assets/images/sprites/items/coin_01.png');
     this.load.image('coin_2', 'assets/images/sprites/items/coin_02.png');
@@ -81,13 +88,14 @@ class MenuScene extends Phaser.Scene {
     title.setDisplaySize(W, H);
 
     // Titel-Schriftzug
-    this.add.text(W / 2, 66, 'DER SCHORLEMEISTER', {
+    this.add.text(W / 2, 48, 'DER SCHORLEMEISTER', {
       fontFamily: 'Georgia, serif', fontSize: '33px', fontStyle: 'bold',
       color: '#ffd54f', stroke: '#000', strokeThickness: 7,
       align: 'center',
     }).setOrigin(0.5);
 
-    this.add.text(W / 2, 118, 'Das letzte Abenteuer', {
+    // "Das letzte Abenteuer" direkt über dem Start-Text
+    this.add.text(W / 2, H - 158, 'Das letzte Abenteuer', {
       fontFamily: 'Georgia, serif', fontSize: '24px', fontStyle: 'italic',
       color: '#ffffff', stroke: '#000', strokeThickness: 5,
     }).setOrigin(0.5);
