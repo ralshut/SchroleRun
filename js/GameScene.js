@@ -289,7 +289,7 @@ class GameScene extends Phaser.Scene {
   _onSchorle(player, schorle) {
     schorle.destroy();
     this.fuel = 1;
-    this.invTimer = Math.max(this.invTimer, 0.2);
+    // Kein Blinken beim Einsammeln – Wachsen soll sich gut anfühlen.
     this._refreshStateFromFuel(true);
     this.sound.play('sfx_magic', { volume: 0.8 });
   }

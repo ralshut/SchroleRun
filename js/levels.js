@@ -31,8 +31,8 @@ const LEVELS = [
       [4080, 515], [4144, 515],
       [4600, 650], [4680, 650],
     ],
-    // erste bodennah (Tutorial-Wachstum), danach erhöht
-    schorle: [[420, 658], [1560, 540], [2300, 560], [3150, 560], [3900, 590], [4600, 658]],
+    // erste bodennah (Tutorial-Wachstum), danach erhöht – alle über festem Boden
+    schorle: [[420, 658], [1150, 548], [2300, 560], [3150, 560], [3900, 590], [4600, 658]],
   },
   {
     title: 'Prüfung des Geistes',
@@ -60,7 +60,7 @@ const LEVELS = [
       [3970, 555], [4034, 555],
       [4900, 650], [4980, 650],
     ],
-    schorle: [[480, 658], [1250, 540], [1980, 560], [3550, 560], [4300, 560], [5050, 658]],
+    schorle: [[480, 658], [1400, 548], [1980, 560], [3300, 548], [4300, 560], [5050, 658]],
     // Brücken-Quiz: pausiert, Frage fällt von oben, falsch = verloren
     quiz: {
       x: 2300,
