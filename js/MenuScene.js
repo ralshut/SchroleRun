@@ -83,6 +83,17 @@ class MenuScene extends Phaser.Scene {
   create() {
     const W = 450, H = 800;
 
+    // ── Direktstart zum Testen: index.html?level=3 (1-basiert) ──────────────
+    // 1 = Stärke, 2 = Geist, 3 = Jugger, 4 = Wille. Überspringt das Menü.
+    const params = new URLSearchParams(window.location.search);
+    if (params.has('level')) {
+      const n = parseInt(params.get('level'), 10);
+      if (!isNaN(n) && n >= 1 && n <= LEVELS.length) {
+        this.scene.start('GameScene', { level: n - 1, totalCoins: 0 });
+        return;
+      }
+    }
+
     // Title image fills screen
     const title = this.add.image(W / 2, H / 2, 'title_screen');
     title.setDisplaySize(W, H);

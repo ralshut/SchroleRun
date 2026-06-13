@@ -40,29 +40,49 @@
     });
   </script>
   <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"></script>
-  <script src="js/levels.js"></script>
-  <script src="js/MenuScene.js"></script>
-  <script src="js/GameScene.js"></script>
-  <script src="js/HudScene.js"></script>
-  <script src="js/GameOverScene.js"></script>
-  <script src="js/WinScene.js"></script>
   <script>
-    window.game = new Phaser.Game({
-      type: Phaser.AUTO,
-      width: 450,
-      height: 800,
-      parent: 'game',
-      backgroundColor: '#2d6a2d',
-      scale: {
-        mode: Phaser.Scale.FIT,
-        autoCenter: Phaser.Scale.CENTER_BOTH,
-      },
-      physics: {
-        default: 'arcade',
-        arcade: { gravity: { y: 900 }, debug: false },
-      },
-      scene: [MenuScene, GameScene, HudScene, GameOverScene, WinScene],
-    });
+    // Spiel-Skripte mit Cache-Buster in Reihenfolge laden, dann starten.
+    // So bekommt man Updates immer ohne hartes Neuladen (kein Strg+Shift+R nötig).
+    // Phaser (CDN) und Bilder werden weiterhin normal gecacht.
+    (function () {
+      var bust = Date.now();
+      var files = [
+        'js/levels.js', 'js/MenuScene.js', 'js/GameScene.js',
+        'js/HudScene.js', 'js/GameOverScene.js', 'js/WinScene.js',
+      ];
+      var i = 0;
+      function next() {
+        if (i >= files.length) { startGame(); return; }
+        var s = document.createElement('script');
+        s.src = files[i++] + '?v=' + bust;
+        s.onload = next;
+        s.onerror = function () {
+          var d = document.getElementById('errlog');
+          d.style.display = 'block';
+          d.innerHTML += '<div>Laden fehlgeschlagen: ' + s.src + '</div>';
+        };
+        document.head.appendChild(s);
+      }
+      function startGame() {
+        window.game = new Phaser.Game({
+          type: Phaser.AUTO,
+          width: 450,
+          height: 800,
+          parent: 'game',
+          backgroundColor: '#2d6a2d',
+          scale: {
+            mode: Phaser.Scale.FIT,
+            autoCenter: Phaser.Scale.CENTER_BOTH,
+          },
+          physics: {
+            default: 'arcade',
+            arcade: { gravity: { y: 900 }, debug: false },
+          },
+          scene: [MenuScene, GameScene, HudScene, GameOverScene, WinScene],
+        });
+      }
+      next();
+    })();
   </script>
 </body>
 </html>
