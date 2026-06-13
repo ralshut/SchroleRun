@@ -10,7 +10,7 @@ const TERM_VEL    = 760;
 // zieht davon. Ohne Schorle verliert er EXPONENTIELL an Tempo (erst schnell,
 // dann langsamer) und fällt zu Julia zurück.
 const FUEL_START   = 0.12;   // klein zu Beginn
-const FUEL_DRAIN_K = 0.19;   // exponentieller Zerfall pro Sekunde (Standard)
+const FUEL_DRAIN_K = 0.15;   // exponentieller Zerfall pro Sekunde (Standard)
 const ENEMY_FUEL_HIT = 0.30;
 const INVINCE_DUR  = 0.6;
 
