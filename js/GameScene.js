@@ -171,7 +171,9 @@ class GameScene extends Phaser.Scene {
       this.chainGfx = this.add.graphics().setDepth(2);
       this.star = this.add.image(this.player.x, GROUND_Y - 40, 'kampfstern')
         .setDisplaySize(34, 34).setDepth(4);
-      this._swing = 0;
+      this._swinging = false;   // gerade im Schwung?
+      this._swingT   = 0;       // Fortschritt im Schwung
+      this._swingCD  = 0;       // Abklingzeit bis zum nächsten Schwung
     }
 
     // ── Julia – die Verfolgerin ────────────────────────────────────────────────
@@ -244,7 +246,7 @@ class GameScene extends Phaser.Scene {
     if (this._gameOver || this._dying) return;
     if (this._quizActive) return;            // Quiz-Buttons regeln das selbst
     if (this._tempActive) return;            // nur das Antippen von Pokahontas zählt
-    if (this.mode === 'jugger') { this._attack(); return; }
+    if (this.mode === 'jugger') { this._startSwing(); return; }
     // Lauf-Modus: Sprung puffern
     this.jumpBuffer = JUMP_BUFFER;
     this.tapHeld = true;
@@ -262,20 +264,34 @@ class GameScene extends Phaser.Scene {
     }
   }
 
-  // ── Jugger-Angriff: tippen zerschlägt den vordersten Gegner in Reichweite ───
-  _attack() {
-    this._swing = 0.22;
-    this.sound.play('sfx_bump', { volume: 0.7 });
-    let best = null, bestX = Infinity;
-    this.enemyGroup.getChildren().forEach(e => {
-      if (!e.active) return;
-      const dx = e.x - this.player.x;
-      if (dx > -40 && dx < 190 && e.x < bestX) { best = e; bestX = e.x; }
+  // ── Jugger: Kette schleudern ────────────────────────────────────────────────
+  // Tippen löst EINEN Bogen-Schwung aus. Nur während der Schwung den Stern nach
+  // vorn führt, trifft er. In Ruhe hängt der Stern HINTER Apfel – Dauerdrücken
+  // hilft nicht, und es gibt eine Abklingzeit gegen Spammen.
+  _startSwing() {
+    if (this._swinging || this._swingCD > 0) return;
+    this._swinging = true;
+    this._swingT   = 0;
+    this.sound.play('sfx_bump', { volume: 0.6 });
+  }
+
+  // Trifft der Stern an (sx,sy) einen Gegner? Zerschlägt ihn; sammelt auch
+  // Schorle ein. Läuft in update() (vor dem Physik-Schritt) – sicher.
+  _hitWithStar(sx, sy) {
+    const R = 46;
+    this.enemyGroup.getChildren().slice().forEach(e => {
+      if (e.active && Phaser.Math.Distance.Between(sx, sy, e.x, e.body.center.y) < R) {
+        e.destroy();
+        this.sound.play('sfx_disappear', { volume: 0.5 });
+      }
     });
-    if (best) {
-      best.destroy();
-      this.sound.play('sfx_disappear', { volume: 0.5 });
-    }
+    this.schorleGroup.getChildren().slice().forEach(s => {
+      if (s.active && Phaser.Math.Distance.Between(sx, sy, s.x, s.y - 20) < R) {
+        s.destroy();
+        this.fuel = 1;
+        this.sound.play('sfx_magic', { volume: 0.7 });
+      }
+    });
   }
 
   // ── Overlap callbacks ─────────────────────────────────────────────────────
@@ -656,17 +672,34 @@ class GameScene extends Phaser.Scene {
     this.fgSprite.tilePositionX = this.worldScroll * 0.5;
   }
 
-  // Kampfstern an einer Kette: hängt am Apfel, schwingt beim Angriff nach vorn.
+  // Kampfstern an einer Kette. In Ruhe hängt er hinten-oben (hinter Apfel).
+  // Ein Schwung führt ihn über den Kopf nach vorn-unten – nur dabei trifft er.
   _updateStar(dt) {
-    if (this._swing > 0) this._swing = Math.max(0, this._swing - dt);
-    const handX = this.player.x + 40;
-    const handY = GROUND_Y - 52;
-    const swung = this._swing > 0;
-    const sx = swung ? handX + 120 : handX + 30;
-    const sy = swung ? handY + 6   : handY + 34;
+    const pivotX = this.player.x + 30;   // Hand/Oberkörper
+    const pivotY = GROUND_Y - 56;
+    const radius = 76;
+    const REST = -150, FRONT = 38;        // Winkel hinten-oben → vorn-unten
+
+    let angDeg;
+    if (this._swinging) {
+      this._swingT += dt;
+      const D = 0.42;
+      const p = Math.min(1, this._swingT / D);
+      angDeg = Phaser.Math.Linear(REST, FRONT, p);
+      const ang = Phaser.Math.DegToRad(angDeg);
+      this._hitWithStar(pivotX + Math.cos(ang) * radius, pivotY + Math.sin(ang) * radius);
+      if (p >= 1) { this._swinging = false; this._swingCD = 0.28; }
+    } else {
+      if (this._swingCD > 0) this._swingCD -= dt;
+      angDeg = REST;
+    }
+
+    const ang = Phaser.Math.DegToRad(angDeg);
+    const sx = pivotX + Math.cos(ang) * radius;
+    const sy = pivotY + Math.sin(ang) * radius;
     this.star.setPosition(sx, sy).setDepth(4);
     this.chainGfx.clear();
     this.chainGfx.lineStyle(3, 0x999999, 1);
-    this.chainGfx.lineBetween(handX, handY, sx, sy);
+    this.chainGfx.lineBetween(pivotX, pivotY, sx, sy);
   }
 }

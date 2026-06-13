@@ -82,7 +82,7 @@ const LEVELS = [
   },
   {
     title: 'Jugger-Turnier',
-    subtitle: 'Kette, Kampfstern – tippe die Gegner!',
+    subtitle: 'Schleudere die Kette – triff im richtigen Moment!',
     scrollSpeed: 165,
     levelWidth: 5200,
     flagX: 4950,
@@ -101,10 +101,10 @@ const LEVELS = [
       [520, 650], [600, 650], [1100, 650], [1700, 650],
       [2300, 650], [2900, 650], [3500, 650], [4100, 650], [4700, 650],
     ],
-    // bodennah, weil im Jugger nicht gesprungen wird
+    // direkt auf dem Boden (kein Springen) – Einsammeln durch Drüberlaufen
     schorle: [
-      [420, 658], [1100, 658], [1800, 658], [2500, 658],
-      [3200, 658], [3900, 658], [4600, 658],
+      [420, 700], [1100, 700], [1800, 700], [2500, 700],
+      [3200, 700], [3900, 700], [4600, 700],
     ],
   },
   {
