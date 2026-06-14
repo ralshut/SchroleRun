@@ -103,9 +103,13 @@ class MenuScene extends Phaser.Scene {
       }
     }
 
-    // Titelmusik
+    // Titelmusik – auf Desktop sofort, auf Mobile nach erstem Touch-Kontakt
     const bgMusic = this.sound.add('music_title', { loop: true, volume: 0.65 });
-    bgMusic.play();
+    if (!this.sound.locked) {
+      bgMusic.play();
+    } else {
+      this.sound.once('unlocked', () => bgMusic.play());
+    }
     this.events.once('shutdown', () => bgMusic.stop());
 
     // Title image fills screen
@@ -144,7 +148,8 @@ class MenuScene extends Phaser.Scene {
       ease: 'Sine.easeInOut',
     });
 
-    this.input.once('pointerdown', () => {
+    // pointerdown entsperrt den AudioContext (Musik startet), pointerup startet das Spiel
+    this.input.once('pointerup', () => {
       this.scene.start('GameScene', { level: 0, totalCoins: 0 });
     });
   }
