@@ -374,12 +374,10 @@ class GameScene extends Phaser.Scene {
     const { w, h } = (this.apfelState !== 'small') ? APFEL_LARGE : APFEL_SMALL;
     this.player.setDisplaySize(w, h);
     this.player.setOrigin(0, 1);
-    // Display-Dimensionen statt frame.realWidth/Height verwenden:
-    // realWidth/Height variiert je nach Animationsframe-Textur und würde den
-    // Body bei jedem Frame-Wechsel leicht verschieben → gelegentliches
-    // Durchfallen nach Schorle-Einsammeln im Sprung.
-    this.player.body.setSize(w * 0.72, h * 0.86, false);
-    this.player.body.setOffset(w * 0.14, h * 0.10);
+    const fw = this.player.frame.realWidth;
+    const fh = this.player.frame.realHeight;
+    this.player.body.setSize(fw * 0.72, fh * 0.86, false);
+    this.player.body.setOffset(fw * 0.14, fh * 0.10);
   }
 
   // ── Brücken-Quiz ────────────────────────────────────────────────────────────
