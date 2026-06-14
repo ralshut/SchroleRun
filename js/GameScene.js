@@ -477,13 +477,16 @@ class GameScene extends Phaser.Scene {
       this._fessel.strokeRoundedRect(this.player.x - 6, yy, 40, 10, 5);
     }
 
-    // Pokahontas tanzt vor Apfel (weiter entfernt als Apfels direkte Nähe)
+    // Pokahontas – Stand-Frame, weiter von Apfel entfernt
     this._clothes = 4;
-    this._poka = this.add.sprite(this.player.x + 200, GROUND_Y, 'pokahontas_d4_1')
-      .setOrigin(0.5, 1).setDisplaySize(130, 106).setDepth(5)
+    this._poka = this.add.image(this.player.x + 200, GROUND_Y, 'pokahontas_4')
+      .setOrigin(0.5, 1).setDisplaySize(95, 165).setDepth(5)
       .setInteractive({ useHandCursor: true });
     this._poka.on('pointerdown', () => this._undressTap());
-    this._poka.play('poka_dance_4');
+    this._pokaDance = this.tweens.add({
+      targets: this._poka, angle: { from: -6, to: 6 },
+      duration: 400, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+    });
 
     this._tempHint = this.add.text(225, 150, 'Widerstehe der Versuchung –\ntippe die Tänzerin!', {
       fontFamily: 'Georgia, serif', fontSize: '20px', fontStyle: 'bold',
@@ -494,7 +497,7 @@ class GameScene extends Phaser.Scene {
   _undressTap() {
     if (!this._tempActive || this._clothes <= 0) return;
     this._clothes--;
-    this._poka.play(`poka_dance_${this._clothes}`);
+    this._poka.setTexture(`pokahontas_${this._clothes}`);
     this.sound.play('sfx_coin', { volume: 0.5 });
     if (this._clothes <= 0) this._endTemptation();
   }
@@ -502,7 +505,7 @@ class GameScene extends Phaser.Scene {
   _endTemptation() {
     // Pokahontas verschwindet, Julia kehrt zurück, es geht weiter.
     this.sound.play('sfx_disappear', { volume: 0.8 });
-    if (this._poka) this._poka.stop();
+    if (this._pokaDance) this._pokaDance.stop();
     this._tempHint.setText('Bestanden!');
     this.tweens.add({
       targets: this._poka, alpha: 0, scaleY: 0, duration: 700,
