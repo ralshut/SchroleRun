@@ -103,13 +103,18 @@ class MenuScene extends Phaser.Scene {
       }
     }
 
-    // Titelmusik – auf Desktop sofort, auf Mobile nach erstem Touch-Kontakt
+    // Titelmusik
+    // Direkt play() aufrufen – Phaser merkt sich das als "pending" falls Audio
+    // noch gesperrt ist und spielt es automatisch ab sobald entsperrt wird.
+    // KEIN separater 'unlocked'-Listener: der kann nach dem Shutdown feuern
+    // und würde dann zwei Melodien gleichzeitig starten.
     const bgMusic = this.sound.add('music_title', { loop: true, volume: 0.65 });
-    if (!this.sound.locked) {
-      bgMusic.play();
-    } else {
-      this.sound.once('unlocked', () => bgMusic.play());
-    }
+    bgMusic.play();
+    // Beim ersten Antippen explizit nochmal versuchen (Mobile: AudioContext
+    // ist jetzt entsperrt, Phaser könnte pending-play übersehen haben)
+    this.input.once('pointerdown', () => {
+      if (!bgMusic.isPlaying) bgMusic.play();
+    });
     this.events.once('shutdown', () => bgMusic.stop());
 
     // Title image fills screen
