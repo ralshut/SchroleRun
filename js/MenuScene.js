@@ -153,9 +153,13 @@ class MenuScene extends Phaser.Scene {
       ease: 'Sine.easeInOut',
     });
 
-    // pointerdown entsperrt den AudioContext (Musik startet), pointerup startet das Spiel
-    this.input.once('pointerup', () => {
-      this.scene.start('GameScene', { level: 0, totalCoins: 0 });
+    // pointerdown entsperrt den AudioContext (Musik startet), pointerup startet das Spiel.
+    // Delay: verhindert dass der pointerup vom vorherigen Screen (z.B. "Zum Menü"-Button)
+    // sofort das Spiel startet, ohne dass der Spieler das Titelbild sieht.
+    this.time.delayedCall(400, () => {
+      this.input.once('pointerup', () => {
+        this.scene.start('GameScene', { level: 0, totalCoins: 0 });
+      });
     });
   }
 }
