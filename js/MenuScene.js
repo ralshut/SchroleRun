@@ -74,6 +74,12 @@ class MenuScene extends Phaser.Scene {
     this.load.image('flag_red_a', 'assets/images/sprites/tiles/flag_red_a.png');
     this.load.image('flag_red_b', 'assets/images/sprites/tiles/flag_red_b.png');
 
+    // Musik (MP3, je eine Datei pro Spielzustand)
+    this.load.audio('music_title',     'assets/sounds/music_title.mp3');
+    this.load.audio('music_levels',    'assets/sounds/music_levels.mp3');
+    this.load.audio('music_gestorben', 'assets/sounds/music_gestorben.mp3');
+    this.load.audio('music_abspann',   'assets/sounds/music_abspann.mp3');
+
     // Sounds (Kenney New Platformer Pack)
     this.load.audio('sfx_jump',      'assets/sounds/sfx_jump.ogg');
     this.load.audio('sfx_coin',      'assets/sounds/sfx_coin.ogg');
@@ -96,6 +102,11 @@ class MenuScene extends Phaser.Scene {
         return;
       }
     }
+
+    // Titelmusik
+    const bgMusic = this.sound.add('music_title', { loop: true, volume: 0.65 });
+    bgMusic.play();
+    this.events.once('shutdown', () => bgMusic.stop());
 
     // Title image fills screen
     const title = this.add.image(W / 2, H / 2, 'title_screen');

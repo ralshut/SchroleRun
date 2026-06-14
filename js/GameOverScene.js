@@ -9,6 +9,10 @@ class GameOverScene extends Phaser.Scene {
 
     this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0.78);
 
+    const bgMusic = this.sound.add('music_gestorben', { loop: true, volume: 0.60 });
+    bgMusic.play();
+    this.events.once('shutdown', () => bgMusic.stop());
+
     let headline = 'Apfel ist gefallen!';
     let sub = 'In die Pfalz-Lücke gestürzt!';
     if (reason === 'caught') {

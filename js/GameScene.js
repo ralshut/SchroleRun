@@ -205,6 +205,11 @@ class GameScene extends Phaser.Scene {
       this.spaceKey.on('up',   this._onPointerUp,   this);
     }
 
+    // ── Musik ─────────────────────────────────────────────────────────────────
+    this._bgMusic = this.sound.add('music_levels', { loop: true, volume: 0.55 });
+    this._bgMusic.play();
+    this.events.once('shutdown', () => this._bgMusic.stop());
+
     // ── HUD ───────────────────────────────────────────────────────────────────
     this.scene.launch('HudScene', { gameScene: this });
 

@@ -49,6 +49,11 @@ class WinScene extends Phaser.Scene {
     this.add.image(W / 2, H / 2, 'title_screen').setDisplaySize(W, H);
     this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0.42);
 
+    // Abspann-Musik
+    const bgMusic = this.sound.add('music_abspann', { loop: true, volume: 0.70 });
+    bgMusic.play();
+    this.events.once('shutdown', () => bgMusic.stop());
+
     // Apfel-Lauf-Animation sicherstellen (falls GameScene nicht lief)
     if (!this.anims.exists('apfel_large_full_run'))
       this.anims.create({
