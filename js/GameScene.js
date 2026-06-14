@@ -236,6 +236,9 @@ class GameScene extends Phaser.Scene {
       def(`apfel_large_${v}_run`, [1,2,3,4,5,6,7].map(i => ({ key:`apfel_large_${v}_${i}` })), 10));
     def('elw_walk', [{ key:'elw_1'},{ key:'elw_2'},{ key:'elw_3'},{ key:'elw_2'}], 6);
     def('coin_spin', [{ key:'coin_1'},{ key:'coin_2'},{ key:'coin_1'}], 5);
+    // Pokahontas-Tanz: 5 Bekleidungs-Stufen × 4 Lauf-Frames → Tanz-Loop
+    for (let lvl = 0; lvl <= 4; lvl++)
+      def(`poka_dance_${lvl}`, [1,2,3,4].map(fn => ({ key:`pokahontas_d${lvl}_${fn}` })), 8);
     if (!this.anims.exists('flag_wave'))
       this.anims.create({ key:'flag_wave', frames:[{ key:'flag_red_a'},{ key:'flag_red_b'}], frameRate:5, repeat:-1 });
   }
@@ -469,16 +472,13 @@ class GameScene extends Phaser.Scene {
       this._fessel.strokeRoundedRect(this.player.x - 6, yy, 40, 10, 5);
     }
 
-    // Pokahontas tanzt vor Apfel
+    // Pokahontas tanzt vor Apfel (weiter entfernt als Apfels direkte Nähe)
     this._clothes = 4;
-    this._poka = this.add.image(this.player.x + 110, GROUND_Y, 'pokahontas_4')
-      .setOrigin(0.5, 1).setDisplaySize(96, 200).setDepth(5)
+    this._poka = this.add.sprite(this.player.x + 200, GROUND_Y, 'pokahontas_d4_1')
+      .setOrigin(0.5, 1).setDisplaySize(130, 106).setDepth(5)
       .setInteractive({ useHandCursor: true });
     this._poka.on('pointerdown', () => this._undressTap());
-    this._pokaDance = this.tweens.add({
-      targets: this._poka, angle: { from: -5, to: 5 },
-      duration: 380, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
-    });
+    this._poka.play('poka_dance_4');
 
     this._tempHint = this.add.text(225, 150, 'Widerstehe der Versuchung –\ntippe die Tänzerin!', {
       fontFamily: 'Georgia, serif', fontSize: '20px', fontStyle: 'bold',
@@ -489,7 +489,7 @@ class GameScene extends Phaser.Scene {
   _undressTap() {
     if (!this._tempActive || this._clothes <= 0) return;
     this._clothes--;
-    this._poka.setTexture(`pokahontas_${this._clothes}`);
+    this._poka.play(`poka_dance_${this._clothes}`);
     this.sound.play('sfx_coin', { volume: 0.5 });
     if (this._clothes <= 0) this._endTemptation();
   }
@@ -497,7 +497,7 @@ class GameScene extends Phaser.Scene {
   _endTemptation() {
     // Pokahontas verschwindet, Julia kehrt zurück, es geht weiter.
     this.sound.play('sfx_disappear', { volume: 0.8 });
-    if (this._pokaDance) this._pokaDance.stop();
+    if (this._poka) this._poka.stop();
     this._tempHint.setText('Bestanden!');
     this.tweens.add({
       targets: this._poka, alpha: 0, scaleY: 0, duration: 700,

@@ -33,9 +33,12 @@ class MenuScene extends Phaser.Scene {
     // Julia – die Verfolgerin (aus dem Poster montiert)
     this.load.image('julia', 'assets/images/sprites/enemies/julia_chase.png');
 
-    // Pokahontas – Prüfung des Willens (5 Zustände)
-    for (let i = 0; i <= 4; i++)
+    // Pokahontas – Prüfung des Willens (5 Stand-Zustände + 4 Tanz-Frames je Zustand)
+    for (let i = 0; i <= 4; i++) {
       this.load.image(`pokahontas_${i}`, `assets/images/sprites/enemies/pokahontas_${i}.png`);
+      for (let f = 1; f <= 4; f++)
+        this.load.image(`pokahontas_d${i}_${f}`, `assets/images/sprites/enemies/pokahontas_d${i}_${f}.png`);
+    }
 
     // Kampfstern – Jugger-Turnier
     this.load.image('kampfstern', 'assets/images/sprites/items/kampfstern.png');
