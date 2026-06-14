@@ -132,9 +132,9 @@ class GameScene extends Phaser.Scene {
     this.schorleGroup = this.physics.add.group();
     (this.cfg.schorle || []).forEach(([sx, sy]) => {
       const s = this.schorleGroup.create(sx, sy, 'schorle');
-      s.setDisplaySize(44, 58).setOrigin(0.5, 1).setDepth(2);
+      s.setDisplaySize(56, 74).setOrigin(0.5, 1).setDepth(2);
       s.body.allowGravity = false;
-      s.body.setSize(36, 48);
+      s.body.setSize(46, 62);
       s._baseY = sy;
       s._bobT  = 0;
     });
@@ -480,7 +480,7 @@ class GameScene extends Phaser.Scene {
     // Pokahontas – Stand-Frame, weiter von Apfel entfernt
     this._clothes = 4;
     this._poka = this.add.image(this.player.x + 200, GROUND_Y, 'pokahontas_4')
-      .setOrigin(0.5, 1).setDisplaySize(95, 165).setDepth(5)
+      .setOrigin(0.5, 1).setDisplaySize(122, 165).setDepth(5)
       .setInteractive({ useHandCursor: true });
     this._poka.on('pointerdown', () => this._undressTap());
     this._pokaDance = this.tweens.add({
@@ -499,7 +499,10 @@ class GameScene extends Phaser.Scene {
     this._clothes--;
     this._poka.setTexture(`pokahontas_${this._clothes}`);
     this.sound.play('sfx_coin', { volume: 0.5 });
-    if (this._clothes <= 0) this._endTemptation();
+    if (this._clothes <= 0) {
+      // Nackt: kurz stehen lassen, dann Szene beenden
+      this.time.delayedCall(1800, () => this._endTemptation());
+    }
   }
 
   _endTemptation() {
