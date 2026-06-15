@@ -281,6 +281,14 @@ class GameScene extends Phaser.Scene {
 
     const introElems = [overlay, badgeTxt, titleTxt, subTxt];
 
+    if (this.levelIdx === 0) {
+      const tipTxt = this.add.text(W/2, 466, 'Sammle Schorle –\nsonst holt Julia dich ein!', {
+        fontFamily: 'Georgia, serif', fontSize: '17px', fontStyle: 'italic',
+        color: '#88ee88', stroke: '#000', strokeThickness: 4, align: 'center',
+      }).setScrollFactor(0).setOrigin(0.5).setDepth(51).setAlpha(0);
+      introElems.push(tipTxt);
+    }
+
     // Einblenden
     this.tweens.add({ targets: introElems, alpha: 1, duration: 420 });
 
