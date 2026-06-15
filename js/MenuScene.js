@@ -97,12 +97,17 @@ class MenuScene extends Phaser.Scene {
     // ── Direktstart zum Testen: index.html?level=3 (1-basiert) ──────────────
     // 1 = Stärke, 2 = Geist, 3 = Jugger, 4 = Wille. Überspringt das Menü.
     const params = new URLSearchParams(window.location.search);
+    if (params.has('kinder')) this.game.registry.set('kinder', true);
     if (params.has('level')) {
       const n = parseInt(params.get('level'), 10);
       if (!isNaN(n) && n >= 1 && n <= LEVELS.length) {
         this.scene.start('GameScene', { level: n - 1, totalCoins: 0 });
         return;
       }
+    }
+    if (params.has('kinder')) {
+      this.scene.start('GameScene', { level: 0, totalCoins: 0 });
+      return;
     }
 
     // Titelmusik – sofort starten (auf Rückbesuchen läuft Audio bereits,

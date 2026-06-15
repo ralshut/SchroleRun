@@ -45,6 +45,7 @@ class GameScene extends Phaser.Scene {
     this.totalCoins     = data.totalCoins ?? 0;
     this.cfg            = LEVELS[this.levelIdx];
     this.mode           = this.cfg.mode ?? 'run';
+    this.kinder         = this.game.registry.get('kinder') ?? false;
     this.drainK         = this.cfg.drain ?? FUEL_DRAIN_K;
     this._gameOver      = false;
     this._flagTriggered = false;
@@ -371,6 +372,7 @@ class GameScene extends Phaser.Scene {
       this.player.setVelocityY(-300);
       this._stompWindow = 150;
       this.sound.play('sfx_bump', { volume: 0.8 });
+      if (this._tempActive && this.kinder) this._onKinderKill();
       return;
     }
 
@@ -511,6 +513,8 @@ class GameScene extends Phaser.Scene {
     this.player.setVelocity(0, 0);
     this.tapHeld = false;
 
+    if (this.kinder) { this._startKinderTemptation(); return; }
+
     // Erhöhte Plattform für Pokahontas – 3 Terrain-Kacheln statt Rechteck
     const pokaX   = this._tempScrollX + 290;
     const platTop = GROUND_Y - 155;
@@ -551,6 +555,117 @@ class GameScene extends Phaser.Scene {
       this._tempWaveTimer = this.time.delayedCall(Phaser.Math.Between(1000, 3000), spawnNext);
     };
     this._tempWaveTimer = this.time.delayedCall(500, spawnNext);
+  }
+
+  // ── Kinderversion: Willens-Prüfung ─────────────────────────────────────────
+
+  _startKinderTemptation() {
+    this._kinderKills     = 0;
+    this._kinderShrinking = false;
+    this._tempDrops       = [];
+    this._tempWalking     = false;
+
+    const pokaX   = this._tempScrollX + 290;
+    const platTop = GROUND_Y - 155;
+    const theme   = this.cfg.tileTheme ?? 'grass';
+    const pLeft   = pokaX - TILE_SIZE * 1.5;
+    this._pokaPlat = [
+      this.add.image(pLeft,               platTop, `terrain_${theme}_horizontal_left`)  .setOrigin(0,1).setDisplaySize(TILE_SIZE,TILE_SIZE).setDepth(4),
+      this.add.image(pLeft + TILE_SIZE,   platTop, `terrain_${theme}_horizontal_middle`).setOrigin(0,1).setDisplaySize(TILE_SIZE,TILE_SIZE).setDepth(4),
+      this.add.image(pLeft + TILE_SIZE*2, platTop, `terrain_${theme}_horizontal_right`) .setOrigin(0,1).setDisplaySize(TILE_SIZE,TILE_SIZE).setDepth(4),
+    ];
+
+    this._bossX   = pokaX;
+    this._platTop = platTop;
+
+    // Großes Boss-Monster (Elwetrische skaliert) – Stage 4 = größte Form
+    this._poka = this.add.sprite(pokaX, platTop, 'elw_1')
+      .setOrigin(0.5, 1).setDisplaySize(168, 192).setDepth(5);
+    this._poka.play('elw_walk');
+    this._pokaDance = this.tweens.add({
+      targets: this._poka, angle: { from: -8, to: 8 },
+      duration: 300, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+    });
+
+    this._tempHint = this.add.text(225, 130,
+      'Das Bossmonster schickt Minions!\nBesiege 25 Monsterchen!', {
+      fontFamily: 'Georgia, serif', fontSize: '18px', fontStyle: 'bold',
+      color: '#ffd54f', stroke: '#000', strokeThickness: 5, align: 'center',
+    }).setScrollFactor(0).setOrigin(0.5).setDepth(22);
+
+    const spawnNext = () => {
+      if (!this._tempActive || this._kinderKills >= 25) return;
+      if (this._kinderShrinking) {
+        this._tempWaveTimer = this.time.delayedCall(200, spawnNext);
+        return;
+      }
+      if (this.enemyGroup.countActive() < 3) this._spawnKinderEnemy();
+      this._tempWaveTimer = this.time.delayedCall(Phaser.Math.Between(800, 1800), spawnNext);
+    };
+    this._tempWaveTimer = this.time.delayedCall(500, spawnNext);
+  }
+
+  _spawnKinderEnemy() {
+    if (!this._tempActive) return;
+    const spawnX = this._bossX + Phaser.Math.Between(-24, 24);
+    const e = this.enemyGroup.create(spawnX, this._platTop - 10, 'elw_1');
+    e.setOrigin(0.5, 1).setDisplaySize(56, 64).setDepth(3).setFlipX(true);
+    e.body.allowGravity = true;
+    e.body.setSize(40, 56);
+    e.setVelocity(-130, 0);
+    e.play('elw_walk');
+    this.physics.add.collider(e, this.groundGroup);
+  }
+
+  _onKinderKill() {
+    this._kinderKills++;
+    const kills     = this._kinderKills;
+    const prevStage = 4 - Math.floor((kills - 1) / 5);
+    const newStage  = 4 - Math.floor(kills / 5);
+
+    if (this._tempHint) {
+      const rem = Math.max(0, 25 - kills);
+      this._tempHint.setText(rem > 0
+        ? `Töte die Monsterchen!\nNoch ${rem} übrig …`
+        : 'Fast geschafft!');
+    }
+
+    if (newStage < prevStage && kills < 25) this._kinderShrink(newStage);
+
+    if (kills >= 25) {
+      if (this._tempWaveTimer) { this._tempWaveTimer.remove(); this._tempWaveTimer = null; }
+      this.time.delayedCall(800, () => this._endTemptation());
+      return;
+    }
+
+    if ([6, 13, 18].includes(kills)) {
+      this.time.delayedCall(400, () => this._dropTempSchorle());
+    }
+  }
+
+  _kinderShrink(stage) {
+    // stage 0 = kleinst (50×56), stage 4 = größt (168×192)
+    const BOSS_SIZES = [[50, 56], [68, 78], [100, 116], [134, 154], [168, 192]];
+    this._kinderShrinking = true;
+    this.physics.world.pause();
+    if (this._pokaDance) this._pokaDance.pause();
+
+    this.tweens.add({
+      targets: this._poka, alpha: 0, duration: 300,
+      onComplete: () => {
+        const [bw, bh] = BOSS_SIZES[Math.max(0, stage)] ?? [50, 56];
+        this._poka.setDisplaySize(bw, bh);
+        this.sound.play('sfx_disappear', { volume: 0.6 });
+        this.tweens.add({
+          targets: this._poka, alpha: 1, duration: 300, delay: 100,
+          onComplete: () => {
+            if (this._pokaDance) this._pokaDance.resume();
+            this.physics.world.resume();
+            this._kinderShrinking = false;
+          },
+        });
+      },
+    });
   }
 
   _spawnTempEnemy() {
