@@ -540,7 +540,7 @@ class GameScene extends Phaser.Scene {
       .setDisplaySize(56, 74).setDepth(6);
     this.physics.add.collider(s, this.groundGroup);
     this.physics.add.overlap(this.player, s, () => {
-      if (s.active) { s.destroy(); this._collectSchorle(); }
+      if (s.active) { s.destroy(); this._onSchorle(); }
     });
     this._tempDrops.push(s);
   }
