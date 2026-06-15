@@ -178,10 +178,9 @@ class GameScene extends Phaser.Scene {
     }
 
     // ── Julia – die Verfolgerin ────────────────────────────────────────────────
-    // Sprites wurden beim Export nach links gespiegelt → setFlipX dreht zurück.
     // Canvas normalisiert 355×399 → 80×90px anzeigen
     this.julia = this.add.sprite(-80, GROUND_Y, 'julia_run_1')
-      .setOrigin(0.5, 1).setDepth(4).setDisplaySize(80, 90).setFlipX(true);
+      .setOrigin(0.5, 1).setDepth(4).setDisplaySize(80, 90);
     this.julia.play('julia_run');
 
     // ── Colliders & overlaps ──────────────────────────────────────────────────
@@ -661,7 +660,7 @@ class GameScene extends Phaser.Scene {
     if (reason === 'caught') {
       // Julia zeigt Greif-Pose wenn sie Apfel erwischt
       this.julia.stop();
-      this.julia.setTexture('julia_catch').setDisplaySize(110, 90).setFlipX(true);
+      this.julia.setTexture('julia_catch').setDisplaySize(110, 90);
       this.sound.play('sfx_hurt', { volume: 0.9 });
     } else if (reason === 'fell') {
       this.player.setTint(0xff4444);
