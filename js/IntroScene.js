@@ -2,16 +2,18 @@ class IntroScene extends Phaser.Scene {
   constructor() { super('IntroScene'); }
 
   preload() {
-    this.load.image('logo', 'assets/images/ui/logo.png');
+    // SVG wird bei 2× Größe gerastert → pixelscharfe Darstellung
+    // Aspect ratio: 158.23×154.57mm ≈ 1.024:1 (fast quadratisch)
+    this.load.svg('logo', 'assets/images/ui/logo.svg', { width: 600, height: 586 });
   }
 
   create() {
     const W = 450, H = 800;
     const CX = W / 2;
 
-    // Logo-Maße: 1024×1536 (2:3), skaliert auf 240×360
-    const LOGO_W = 240, LOGO_H = 360;
-    const LOGO_Y = 295; // Mittelpunkt final
+    // Anzeigegröße: 300×293 (halbe Render-Auflösung → scharf)
+    const LOGO_W = 300, LOGO_H = 293;
+    const LOGO_Y = 295;
 
     // ── Hintergrund ──────────────────────────────────────────────────────────
     this.add.rectangle(CX, H / 2, W, H, 0x06020a);
@@ -36,29 +38,29 @@ class IntroScene extends Phaser.Scene {
     glow.fillStyle(0xffd54f, 0.11); glow.fillCircle(CX, LOGO_Y, 190);
     glow.fillStyle(0xfff5cc, 0.14); glow.fillCircle(CX, LOGO_Y, 100);
 
-    // ── Schockwelle (Ring, der beim Aufprall aufgeht) ────────────────────
+    // ── Schockwelle ───────────────────────────────────────────────────────
     const ring = this.add.graphics().setAlpha(0).setDepth(2);
-    ring.lineStyle(4, 0xffd54f, 1);
-    ring.strokeCircle(CX, LOGO_Y, 1);
 
-    // ── Logo ─────────────────────────────────────────────────────────────
+    // ── Logo (SVG, weiß auf transparentem Hintergrund) ───────────────────
     const logo = this.add.image(CX, -260, 'logo')
       .setDisplaySize(LOGO_W, LOGO_H)
       .setAlpha(0)
       .setDepth(4);
 
     // ── Untertitel ────────────────────────────────────────────────────────
-    const sub = this.add.text(CX, LOGO_Y + LOGO_H / 2 + 46, '– Das letzte Abenteuer –', {
+    const SUB_Y  = LOGO_Y + LOGO_H / 2 + 46;
+    const LINE_Y = LOGO_Y + LOGO_H / 2 + 34;
+
+    const sub = this.add.text(CX, SUB_Y, '– Das letzte Abenteuer –', {
       fontFamily: 'Georgia, serif', fontSize: '22px', fontStyle: 'italic',
       color: '#e8b86d', stroke: '#000000', strokeThickness: 6,
     }).setOrigin(0.5).setAlpha(0).setDepth(4);
 
     // ── Dekolinien ────────────────────────────────────────────────────────
-    const lineY = LOGO_Y + LOGO_H / 2 + 34;
     const deco = this.add.graphics().setAlpha(0).setDepth(4);
     deco.lineStyle(1.5, 0xffd54f, 0.65);
-    deco.lineBetween(26, lineY, CX - 155, lineY);
-    deco.lineBetween(CX + 155, lineY, W - 26, lineY);
+    deco.lineBetween(26, LINE_Y, CX - 155, LINE_Y);
+    deco.lineBetween(CX + 155, LINE_Y, W - 26, LINE_Y);
 
     // ── Tap-Hinweis ───────────────────────────────────────────────────────
     const hint = this.add.text(CX, H - 72, '~ TIPPEN ZUM FORTFAHREN ~', {
@@ -81,7 +83,7 @@ class IntroScene extends Phaser.Scene {
     // Schimmer blendet sanft ein
     this.tweens.add({ targets: glow, alpha: 1, duration: 1000, delay: 60 });
 
-    // Logo fliegt von oben herein, Back.easeOut = Überschwinger beim Landen
+    // Logo fliegt von oben herein
     this.tweens.add({
       targets: logo,
       y: LOGO_Y,
@@ -91,71 +93,51 @@ class IntroScene extends Phaser.Scene {
       ease: 'Back.easeOut',
       onComplete: () => {
 
-        // ── Aufprall-Effekte ──────────────────────────────────────────────
-
-        // Kamerazittern
+        // Kamerazittern + Blitz
         this.cameras.main.shake(260, 0.012);
-
-        // Warmer Blitz
         this.cameras.main.flash(160, 255, 210, 80, false);
 
-        // Strahlenburst erscheint kurz, dann ausblenden
+        // Strahlenburst
         this.tweens.add({
           targets: rays, alpha: 1, duration: 160,
           onComplete: () => {
-            this.tweens.add({
-              targets: rays, alpha: 0, duration: 1100, delay: 120,
-              ease: 'Cubic.easeIn',
-            });
+            this.tweens.add({ targets: rays, alpha: 0, duration: 1100, delay: 120, ease: 'Cubic.easeIn' });
           },
         });
 
-        // Schockwellen-Ring expandiert nach außen
+        // Schockwellen-Ring
         const maxR = 340;
         let progress = 0;
-        const ringTimer = this.time.addEvent({
+        this.time.addEvent({
           delay: 14, repeat: 36,
           callback: () => {
             progress += 1 / 36;
             const r = progress * maxR;
-            const alpha = 1 - progress;
             ring.clear();
-            ring.lineStyle(3 * (1 - progress * 0.7), 0xffd54f, alpha);
+            ring.lineStyle(3 * (1 - progress * 0.7), 0xffd54f, 1 - progress);
             ring.strokeCircle(CX, LOGO_Y, r);
-            ring.setAlpha(alpha);
+            ring.setAlpha(1 - progress);
           },
         });
 
-        // Logo kurzer Scale-Punch beim Aufprall
-        this.tweens.add({
-          targets: logo, scaleX: 1.08, scaleY: 1.08,
-          duration: 90, yoyo: true,
-        });
+        // Scale-Punch beim Aufprall
+        this.tweens.add({ targets: logo, scaleX: 1.08, scaleY: 1.08, duration: 90, yoyo: true });
 
-        // Logo sanft schweben + leicht pulsieren
+        // Sanftes Schweben + Pulsieren
         this.time.delayedCall(300, () => {
-          this.tweens.add({
-            targets: logo, y: LOGO_Y - 7,
-            duration: 2400, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
-          });
-          this.tweens.add({
-            targets: logo, alpha: 0.86,
-            duration: 2100, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
-          });
+          this.tweens.add({ targets: logo, y: LOGO_Y - 7, duration: 2400, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+          this.tweens.add({ targets: logo, alpha: 0.86, duration: 2100, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
         });
 
-        // Untertitel + Dekolinien einblenden
+        // Untertitel + Dekolinien
         this.tweens.add({ targets: [sub, deco], alpha: 1, duration: 520, delay: 200 });
 
-        // Tap-Hinweis erscheint und blinkt
+        // Tap-Hinweis
         this.time.delayedCall(950, () => {
           this.tweens.add({
             targets: hint, alpha: 1, duration: 540,
             onComplete: () => {
-              this.tweens.add({
-                targets: hint, alpha: 0,
-                duration: 680, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
-              });
+              this.tweens.add({ targets: hint, alpha: 0, duration: 680, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
             },
           });
           this.input.on('pointerdown', onTap);
