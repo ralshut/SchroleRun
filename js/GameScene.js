@@ -208,7 +208,10 @@ class GameScene extends Phaser.Scene {
     // ── Musik ─────────────────────────────────────────────────────────────────
     this._bgMusic = this.sound.add('music_levels', { loop: true, volume: 0.55 });
     this._bgMusic.play();
-    this.events.once('shutdown', () => this._bgMusic.stop());
+    this.events.once('shutdown', () => {
+      this._bgMusic.stop();
+      if (this._fightMusic) { this._fightMusic.stop(); this._fightMusic = null; }
+    });
 
     // ── HUD ───────────────────────────────────────────────────────────────────
     this.scene.launch('HudScene', { gameScene: this });
@@ -471,6 +474,11 @@ class GameScene extends Phaser.Scene {
     this._tempScrollX = this.worldScroll;   // Scroll einfrieren
     this.julia.setVisible(false);
 
+    // Kampfmusik statt Level-Musik
+    this._bgMusic.stop();
+    this._fightMusic = this.sound.add('music_fight', { loop: true, volume: 0.7 });
+    this._fightMusic.play();
+
     // Apfel weiter links positionieren (mehr Platz zum Kämpfen)
     this.player.x = this._tempScrollX + 90;
     this.player.setVelocity(0, 0);
@@ -538,6 +546,14 @@ class GameScene extends Phaser.Scene {
     if (this._pokaDance) this._pokaDance.stop();
     if (this._tempWaveTimer) { this._tempWaveTimer.remove(); this._tempWaveTimer = null; }
     if (this._tempHint) this._tempHint.setText('Bestanden!');
+
+    // Kampfmusik ausblenden, Level-Musik wieder einblenden
+    if (this._fightMusic) {
+      this.tweens.add({ targets: this._fightMusic, volume: 0, duration: 600,
+        onComplete: () => { if (this._fightMusic) { this._fightMusic.stop(); this._fightMusic = null; } } });
+    }
+    this._bgMusic.play();
+
     this.tweens.add({
       targets: this._poka, alpha: 0, scaleY: 0, duration: 700,
       onComplete: () => {

@@ -79,6 +79,7 @@ class MenuScene extends Phaser.Scene {
     this.load.audio('music_levels',    'assets/sounds/music_levels.mp3');
     this.load.audio('music_gestorben', 'assets/sounds/music_gestorben.mp3');
     this.load.audio('music_abspann',   'assets/sounds/music_abspann.mp3');
+    this.load.audio('music_fight',     'assets/sounds/music_fight.mp3');
 
     // Sounds (Kenney New Platformer Pack)
     this.load.audio('sfx_jump',      'assets/sounds/sfx_jump.ogg');
