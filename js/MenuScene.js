@@ -121,14 +121,20 @@ class MenuScene extends Phaser.Scene {
       align: 'center',
     }).setOrigin(0.5);
 
-    // "Das letzte Abenteuer" direkt über dem Start-Text
-    this.add.text(W / 2, H - 158, 'Das letzte Abenteuer', {
+    this.add.text(W / 2, 572, 'Das letzte Abenteuer', {
       fontFamily: 'Georgia, serif', fontSize: '24px', fontStyle: 'italic',
       color: '#ffffff', stroke: '#000', strokeThickness: 5,
     }).setOrigin(0.5);
 
+    this.add.text(W / 2, 618,
+      'Julia jagt Apfel durch die Pfalz –\nerst als Schorlemeister darf er zu ihr!', {
+      fontFamily: 'Georgia, serif', fontSize: '16px', fontStyle: 'italic',
+      color: '#ffd54f', stroke: '#000', strokeThickness: 4,
+      align: 'center', lineSpacing: 4,
+    }).setOrigin(0.5);
+
     // Pulsing start text
-    const startText = this.add.text(W / 2, H - 120, 'TIPPEN ZUM STARTEN', {
+    const startText = this.add.text(W / 2, 748, 'TIPPEN ZUM STARTEN', {
       fontFamily: 'Arial, sans-serif',
       fontSize: '22px',
       fontStyle: 'bold',
