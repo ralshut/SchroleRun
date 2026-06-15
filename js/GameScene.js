@@ -231,6 +231,13 @@ class GameScene extends Phaser.Scene {
       targets: [titleTxt, subTxt], alpha: 0, delay: 2000, duration: 800,
       onComplete: () => { titleTxt.destroy(); subTxt.destroy(); },
     });
+
+    // Debug-Skip: ?fight springt direkt in die Pokahontas-Prüfung
+    if (new URLSearchParams(window.location.search).has('fight') && this.cfg.temptation) {
+      this.worldScroll = this.cfg.temptation.x;
+      this.cameras.main.scrollX = this.worldScroll;
+      this.time.delayedCall(300, () => this._startTemptation());
+    }
   }
 
   // ── Animations ────────────────────────────────────────────────────────────
