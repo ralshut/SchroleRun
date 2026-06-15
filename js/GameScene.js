@@ -536,11 +536,13 @@ class GameScene extends Phaser.Scene {
   _dropTempSchorle() {
     if (!this._tempActive) return;
     const sx = this._tempScrollX + Phaser.Math.Between(110, 200);
-    const s = this.physics.add.image(sx, GROUND_Y - 310, 'schorle')
-      .setDisplaySize(56, 74).setDepth(6);
-    this.physics.add.collider(s, this.groundGroup);
-    this.physics.add.overlap(this.player, s, () => {
-      if (s.active) { s.destroy(); this.fuel = 1; this.sound.play('sfx_magic', { volume: 0.8 }); }
+    // Kein physics.add.image: Physics-Bodys landen im Quadtree und lösen
+    // fälschlicherweise _onSchorle(player, undefined) für schorleGroup aus.
+    // Stattdessen: normales Image + Tween-Fall + manuelle Nähe-Prüfung in update().
+    const s = this.add.image(sx, GROUND_Y - 310, 'schorle')
+      .setDisplaySize(56, 74).setOrigin(0.5, 1).setDepth(6);
+    this.tweens.add({
+      targets: s, y: GROUND_Y, duration: 900, ease: 'Quad.easeIn',
     });
     this._tempDrops.push(s);
   }
@@ -680,6 +682,20 @@ class GameScene extends Phaser.Scene {
 
     if (this._tempActive) {
       this.player.setVelocityX(this._tempWalking ? 110 : 0);
+
+      // Temp-Schorle-Drops: manuelle Nähe-Prüfung (kein Physics-Body)
+      if (this._tempDrops) {
+        const pcx = this.player.x + 36;
+        this._tempDrops.forEach((s, i) => {
+          if (!s || !s.active) return;
+          if (Math.abs(pcx - s.x) < 52 && s.y > GROUND_Y - 120) {
+            s.destroy();
+            this._tempDrops[i] = null;
+            this.fuel = 1;
+            this.sound.play('sfx_magic', { volume: 0.8 });
+          }
+        });
+      }
     } else {
       const factor = FUEL_BASE + FUEL_GAIN * this.fuel;
       this.player.setVelocityX(this.cfg.scrollSpeed * factor);
