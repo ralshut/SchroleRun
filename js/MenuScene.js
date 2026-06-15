@@ -103,18 +103,10 @@ class MenuScene extends Phaser.Scene {
       }
     }
 
-    // Titelmusik
-    // Direkt play() aufrufen – Phaser merkt sich das als "pending" falls Audio
-    // noch gesperrt ist und spielt es automatisch ab sobald entsperrt wird.
-    // KEIN separater 'unlocked'-Listener: der kann nach dem Shutdown feuern
-    // und würde dann zwei Melodien gleichzeitig starten.
+    // Titelmusik – sofort starten (auf Rückbesuchen läuft Audio bereits,
+    // beim Erstaufruf queued Phaser den Sound bis zum ersten Tap).
     const bgMusic = this.sound.add('music_title', { loop: true, volume: 0.65 });
     bgMusic.play();
-    // Beim ersten Antippen explizit nochmal versuchen (Mobile: AudioContext
-    // ist jetzt entsperrt, Phaser könnte pending-play übersehen haben)
-    this.input.once('pointerdown', () => {
-      if (!bgMusic.isPlaying) bgMusic.play();
-    });
     this.events.once('shutdown', () => bgMusic.stop());
 
     // Title image fills screen
@@ -153,13 +145,19 @@ class MenuScene extends Phaser.Scene {
       ease: 'Sine.easeInOut',
     });
 
-    // pointerdown entsperrt den AudioContext (Musik startet), pointerup startet das Spiel.
-    // Delay: verhindert dass der pointerup vom vorherigen Screen (z.B. "Zum Menü"-Button)
-    // sofort das Spiel startet, ohne dass der Spieler das Titelbild sieht.
-    this.time.delayedCall(400, () => {
-      this.input.once('pointerup', () => {
-        this.scene.start('GameScene', { level: 0, totalCoins: 0 });
-      });
+    // ready-Flag: sperrt Spielstart für 400ms.
+    // – Verhindert Bleed-through vom "Zum Menü"-Tap des vorigen Screens.
+    // – Gibt der Titelmusik Zeit anzulaufen bevor das Spiel startet.
+    // pointerdown: entsperrt AudioContext auf Mobile → Musik startet.
+    // pointerup:   startet Spiel, aber nur wenn ready.
+    let ready = false;
+    this.time.delayedCall(400, () => { ready = true; });
+
+    this.input.on('pointerdown', () => {
+      if (!bgMusic.isPlaying) bgMusic.play();
+    });
+    this.input.on('pointerup', () => {
+      if (ready) this.scene.start('GameScene', { level: 0, totalCoins: 0 });
     });
   }
 }
