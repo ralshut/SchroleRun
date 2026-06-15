@@ -853,14 +853,8 @@ class GameScene extends Phaser.Scene {
     }
     this.cameras.main.scrollX = this.worldScroll;
 
-    // ── Schorle-Pegel: exponentieller Zerfall + Mindest-Rate im Kampf ──────────
-    // Exponentiell: schnell bei vollem Tank, immer langsamer bei leerem.
-    // Im Kampf ohne Mindest-Rate würde der Balken bei ~15% Tank kaum sichtbar
-    // sinken (0.15 × 0.18 = 0.027/s) – fühlt sich zu leicht an.
-    // Mindest-Drain 0.04/s stellt sicher dass der Balken immer spürbar läuft.
-    let fuelDrain = this.fuel * this.drainK;
-    if (this._tempActive && !this._tempWalking) fuelDrain = Math.max(fuelDrain, 0.04);
-    this.fuel = Math.max(0, this.fuel - fuelDrain * dt);
+    // ── Schorle-Pegel: exponentieller Zerfall (erst schnell, dann langsam) ────
+    this.fuel = Math.max(0, this.fuel - this.fuel * this.drainK * dt);
     this._refreshStateFromFuel();
 
     // Während Versuchung: kein Schorle-Vorrat mehr = verloren
