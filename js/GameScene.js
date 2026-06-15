@@ -525,19 +525,20 @@ class GameScene extends Phaser.Scene {
       color: '#ffd54f', stroke: '#000', strokeThickness: 5, align: 'center',
     }).setScrollFactor(0).setOrigin(0.5).setDepth(22);
 
-    // Monsterchen mit variablen Abständen (380–1050 ms), 25 insgesamt
+    // Monsterchen mit variablen Abständen (1000–3000 ms), 20 insgesamt.
+    // Breites Intervall → 1–2 Monster gleichzeitig, echte Lücken bleiben.
     this._tempDrops   = [];
     this._tempWalking = false;
     this._undressing  = false;
     const spawnNext = () => {
-      if (!this._tempActive || this._tempWaveCount >= 25) return;
+      if (!this._tempActive || this._tempWaveCount >= 20) return;
       if (this._undressing) {
         // Kurz warten bis Überblendung durch ist, dann weitermachen
         this._tempWaveTimer = this.time.delayedCall(200, spawnNext);
         return;
       }
       this._spawnTempEnemy();
-      this._tempWaveTimer = this.time.delayedCall(Phaser.Math.Between(380, 1050), spawnNext);
+      this._tempWaveTimer = this.time.delayedCall(Phaser.Math.Between(1000, 3000), spawnNext);
     };
     this._tempWaveTimer = this.time.delayedCall(500, spawnNext);
   }
@@ -555,8 +556,8 @@ class GameScene extends Phaser.Scene {
     if (this._tempWaveCount % 5 === 0 && this._clothes > 0) {
       this.time.delayedCall(1100, () => this._undressWave());
     }
-    // Nach dem 6., 14. und 22. Monster fällt eine Schorle vom Himmel
-    if ([6, 14, 22].includes(this._tempWaveCount)) {
+    // Nach dem 6., 13. und 18. Monster fällt eine Schorle vom Himmel
+    if ([6, 13, 18].includes(this._tempWaveCount)) {
       this.time.delayedCall(400, () => this._dropTempSchorle());
     }
   }
