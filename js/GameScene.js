@@ -503,11 +503,15 @@ class GameScene extends Phaser.Scene {
       color: '#ffd54f', stroke: '#000', strokeThickness: 5, align: 'center',
     }).setScrollFactor(0).setOrigin(0.5).setDepth(22);
 
-    // 25 Monsterchen in Wellen, alle 650ms eines
-    this._tempWaveTimer = this.time.addEvent({
-      delay: 650, callback: this._spawnTempEnemy,
-      callbackScope: this, repeat: 24,
-    });
+    // Monsterchen mit variablen Abständen (380–1050 ms), 25 insgesamt
+    this._tempDrops   = [];
+    this._tempWalking = false;
+    const spawnNext = () => {
+      if (!this._tempActive || this._tempWaveCount >= 25) return;
+      this._spawnTempEnemy();
+      this._tempWaveTimer = this.time.delayedCall(Phaser.Math.Between(380, 1050), spawnNext);
+    };
+    this._tempWaveTimer = this.time.delayedCall(500, spawnNext);
   }
 
   _spawnTempEnemy() {
@@ -523,6 +527,22 @@ class GameScene extends Phaser.Scene {
     if (this._tempWaveCount % 5 === 0 && this._clothes > 0) {
       this.time.delayedCall(1100, () => this._undressWave());
     }
+    // Nach dem 6., 14. und 22. Monster fällt eine Schorle vom Himmel
+    if ([6, 14, 22].includes(this._tempWaveCount)) {
+      this.time.delayedCall(400, () => this._dropTempSchorle());
+    }
+  }
+
+  _dropTempSchorle() {
+    if (!this._tempActive) return;
+    const sx = this._tempScrollX + Phaser.Math.Between(110, 200);
+    const s = this.physics.add.image(sx, GROUND_Y - 310, 'schorle')
+      .setDisplaySize(56, 74).setDepth(6);
+    this.physics.add.collider(s, this.groundGroup);
+    this.physics.add.overlap(this.player, s, () => {
+      if (s.active) { s.destroy(); this._collectSchorle(); }
+    });
+    this._tempDrops.push(s);
   }
 
   _undressWave() {
@@ -546,6 +566,7 @@ class GameScene extends Phaser.Scene {
     if (this._pokaDance) this._pokaDance.stop();
     if (this._tempWaveTimer) { this._tempWaveTimer.remove(); this._tempWaveTimer = null; }
     if (this._tempHint) this._tempHint.setText('Bestanden!');
+    if (this._tempDrops) { this._tempDrops.forEach(s => s && s.active && s.destroy()); this._tempDrops = []; }
 
     // Kampfmusik ausblenden, Level-Musik wieder einblenden
     if (this._fightMusic) {
@@ -559,9 +580,17 @@ class GameScene extends Phaser.Scene {
       onComplete: () => {
         [this._poka, this._pokaPlat, this._tempHint].forEach(o => o && o.destroy());
         this._poka = this._pokaPlat = this._tempHint = null;
-        this._tempActive = false;
-        this._tempDone   = true;
-        this.julia.setVisible(true);
+
+        // Apfel läuft langsam nach rechts bevor Julia wiederkommt,
+        // damit er nicht sofort gefangen wird
+        this._tempWalking = true;
+        this.time.delayedCall(1800, () => {
+          this._tempWalking = false;
+          this._tempActive  = false;
+          this._tempDone    = true;
+          this.juliaIntroT  = 0;   // Julia läuft frisch von links ein
+          this.julia.setVisible(true);
+        });
       },
     });
   }
@@ -645,7 +674,7 @@ class GameScene extends Phaser.Scene {
     this._refreshStateFromFuel();
 
     if (this._tempActive) {
-      this.player.setVelocityX(0);   // Apfel bleibt stehen
+      this.player.setVelocityX(this._tempWalking ? 110 : 0);
     } else {
       const factor = FUEL_BASE + FUEL_GAIN * this.fuel;
       this.player.setVelocityX(this.cfg.scrollSpeed * factor);
