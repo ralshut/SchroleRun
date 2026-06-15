@@ -111,7 +111,7 @@ class MenuScene extends Phaser.Scene {
 
     // Title image fills screen
     const title = this.add.image(W / 2, H / 2, 'title_screen');
-    title.setDisplaySize(W, H);
+    title.setDisplaySize(Math.round(H * 1024 / 1536), H);
 
     // Titel-Schriftzug
     this.add.text(W / 2, 48, 'DER SCHORLEMEISTER', {
