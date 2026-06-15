@@ -29,8 +29,10 @@ class MenuScene extends Phaser.Scene {
     for (let i = 1; i <= 3; i++)
       this.load.image(`elw_${i}`, `assets/images/sprites/enemies/elwetrische_0${i}.png`);
 
-    // Julia – die Verfolgerin (aus dem Poster montiert)
-    this.load.image('julia', 'assets/images/sprites/enemies/julia_chase.png');
+    // Julia – die Verfolgerin (5 Lauf-Frames + Greif-Pose)
+    for (let i = 1; i <= 5; i++)
+      this.load.image(`julia_run_${i}`, `assets/images/sprites/enemies/julia_run_${i}.png`);
+    this.load.image('julia_catch', 'assets/images/sprites/enemies/julia_catch.png');
 
     // Pokahontas – Prüfung des Willens (5 Stand-Zustände + 4 Tanz-Frames je Zustand)
     for (let i = 0; i <= 4; i++) {

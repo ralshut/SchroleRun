@@ -178,10 +178,10 @@ class GameScene extends Phaser.Scene {
     }
 
     // ── Julia – die Verfolgerin ────────────────────────────────────────────────
-    this.julia = this.add.image(-80, GROUND_Y, 'julia')
-      .setOrigin(0.5, 1).setDepth(4);
-    const jh = 82;
-    this.julia.setDisplaySize(jh * 300 / 1125, jh);
+    // Canvas normalisiert 346×379 → anzeigen bei 110×120px
+    this.julia = this.add.sprite(-80, GROUND_Y, 'julia_run_1')
+      .setOrigin(0.5, 1).setDepth(4).setDisplaySize(110, 120);
+    this.julia.play('julia_run');
 
     // ── Colliders & overlaps ──────────────────────────────────────────────────
     this.physics.add.collider(this.player, this.groundGroup);
@@ -252,6 +252,7 @@ class GameScene extends Phaser.Scene {
       def(`apfel_large_${v}_run`, [1,2,3,4,5,6,7].map(i => ({ key:`apfel_large_${v}_${i}` })), 10));
     def('elw_walk', [{ key:'elw_1'},{ key:'elw_2'},{ key:'elw_3'},{ key:'elw_2'}], 6);
     def('coin_spin', [{ key:'coin_1'},{ key:'coin_2'},{ key:'coin_1'}], 5);
+    def('julia_run', [1,2,3,4,5].map(i => ({ key:`julia_run_${i}` })), 8);
     // Pokahontas-Tanz: 5 Bekleidungs-Stufen × 4 Lauf-Frames → Tanz-Loop
     for (let lvl = 0; lvl <= 4; lvl++)
       def(`poka_dance_${lvl}`, [1,2,3,4].map(fn => ({ key:`pokahontas_d${lvl}_${fn}` })), 8);
@@ -656,7 +657,12 @@ class GameScene extends Phaser.Scene {
     this._dying    = true;
     this._removeInput();
     this.player.setVelocityX(0);
-    if (reason === 'fell') {
+    if (reason === 'caught') {
+      // Julia zeigt Greif-Pose wenn sie Apfel erwischt
+      this.julia.stop();
+      this.julia.setTexture('julia_catch').setDisplaySize(150, 120);
+      this.sound.play('sfx_hurt', { volume: 0.9 });
+    } else if (reason === 'fell') {
       this.player.setTint(0xff4444);
       this.sound.play('sfx_disappear', { volume: 0.9 });
     } else if (reason !== 'quiz') {
