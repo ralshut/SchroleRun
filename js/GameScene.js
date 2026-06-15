@@ -57,6 +57,7 @@ class GameScene extends Phaser.Scene {
     this.coyoteTimer    = 0;
     this.jumpBuffer     = 0;
     this.juliaIntroT    = 0;
+    this._stompWindow   = 0;
 
     // Interaktions-Pause (Quiz / Versuchung)
     this._pause       = false;
@@ -339,10 +340,17 @@ class GameScene extends Phaser.Scene {
     if (this.invTimer > 0 || this._dying || this._pause) return;
 
     // Stomp (nur Lauf-Modus)
-    if (this.mode !== 'jugger' &&
-        player.body.velocity.y > 20 && player.body.bottom <= enemy.body.top + 24) {
+    // _stompWindow erlaubt mehrere Monster im selben Physik-Step zu stompen:
+    // nach dem ersten Stomp ist velocity.y bereits -300 (Abprall), deshalb
+    // reicht die velocity-Prüfung für gleichzeitig überlappende Feinde nicht.
+    const isStomp = this.mode !== 'jugger' && (
+      this._stompWindow > 0 ||
+      (player.body.velocity.y > 20 && player.body.bottom <= enemy.body.top + 24)
+    );
+    if (isStomp) {
       enemy.destroy();
       this.player.setVelocityY(-300);
+      this._stompWindow = 150;
       this.sound.play('sfx_bump', { volume: 0.8 });
       return;
     }
@@ -480,6 +488,7 @@ class GameScene extends Phaser.Scene {
     this._clothes     = 4;
     this._tempWaveCount = 0;
     this._tempScrollX = this.worldScroll;   // Scroll einfrieren
+    this.fuel = 1;                          // Schorle-Vorrat auffüllen
     this.julia.setVisible(false);
 
     // Kampfmusik statt Level-Musik
@@ -789,6 +798,8 @@ class GameScene extends Phaser.Scene {
     if (this.worldScroll >= this.maxScroll - 1) { this._win(); return; }
 
     // ── Unverwundbarkeits-Flackern ───────────────────────────────────────────
+    if (this._stompWindow > 0) this._stompWindow = Math.max(0, this._stompWindow - dt);
+
     if (this.invTimer > 0) {
       this.invTimer -= dt;
       this.flickerT += dt;
