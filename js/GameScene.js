@@ -342,7 +342,7 @@ class GameScene extends Phaser.Scene {
     // Treffer: kostet Schorle-Vorsprung und schubst Richtung Julia.
     // Größe ebenfalls erst in update() ändern (nicht im Physik-Schritt).
     this.fuel = Math.max(0, this.fuel - ENEMY_FUEL_HIT);
-    this.player.x -= 30;
+    if (!this._tempActive) this.player.x -= 30;
     this.invTimer = INVINCE_DUR;
     this.flickerT = 0;
     this.sound.play('sfx_hurt', { volume: 0.9 });
@@ -675,6 +675,11 @@ class GameScene extends Phaser.Scene {
     // ── Schorle-Pegel: exponentieller Zerfall (erst schnell, dann langsam) ────
     this.fuel = Math.max(0, this.fuel - this.fuel * this.drainK * dt);
     this._refreshStateFromFuel();
+
+    // Während Versuchung: kein Schorle-Vorrat mehr = verloren
+    if (this._tempActive && !this._tempWalking && this.apfelState === 'small') {
+      this._lose('caught'); return;
+    }
 
     if (this._tempActive) {
       this.player.setVelocityX(this._tempWalking ? 110 : 0);
