@@ -47,7 +47,7 @@
     (function () {
       var bust = Date.now();
       var files = [
-        'js/levels.js', 'js/MenuScene.js', 'js/GameScene.js',
+        'js/levels.js', 'js/IntroScene.js', 'js/MenuScene.js', 'js/GameScene.js',
         'js/HudScene.js', 'js/GameOverScene.js', 'js/WinScene.js',
       ];
       var i = 0;
@@ -78,7 +78,7 @@
             default: 'arcade',
             arcade: { gravity: { y: 900 }, debug: false },
           },
-          scene: [MenuScene, GameScene, HudScene, GameOverScene, WinScene],
+          scene: [IntroScene, MenuScene, GameScene, HudScene, GameOverScene, WinScene],
         });
       }
       next();
