@@ -381,13 +381,10 @@ class GameScene extends Phaser.Scene {
     const { w, h } = (this.apfelState !== 'small') ? APFEL_LARGE : APFEL_SMALL;
     this.player.setDisplaySize(w, h);
     this.player.setOrigin(0, 1);
-    // Body-Maße aus Display-Dimensionen (nicht frame.realWidth/Height), weil
-    // Frame 07 der großen Animationen nur 298px hoch ist statt ~430px.
-    // Das ließ den Körper 130px springen, riss den Bodenkontakt und Apfel
-    // fiel durch den Boden. offset.y = h*0.14 stellt sicher, dass
-    // body.bottom == sprite.y (Fuß exakt auf Bodenhöhe).
-    this.player.body.setSize(w * 0.72, h * 0.86);
-    this.player.body.setOffset(w * 0.14, h * 0.14);
+    const fw = this.player.frame.realWidth;
+    const fh = this.player.frame.realHeight;
+    this.player.body.setSize(fw * 0.72, fh * 0.86, false);
+    this.player.body.setOffset(fw * 0.14, fh * 0.10);
   }
 
   // ── Brücken-Quiz ────────────────────────────────────────────────────────────
