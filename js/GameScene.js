@@ -253,7 +253,11 @@ class GameScene extends Phaser.Scene {
   _onPointerDown(pointer) {
     if (this._gameOver || this._dying) return;
     if (this._quizActive) return;            // Quiz-Buttons regeln das selbst
-    if (this._tempActive) return;            // nur das Antippen von Pokahontas zählt
+    if (this._tempActive) {                  // während Versuchung: nur Springen erlaubt
+      this.jumpBuffer = JUMP_BUFFER;
+      this.tapHeld = true;
+      return;
+    }
     if (this.mode === 'jugger') { this._startSwing(); return; }
     // Lauf-Modus: Sprung puffern
     this.jumpBuffer = JUMP_BUFFER;
@@ -461,64 +465,87 @@ class GameScene extends Phaser.Scene {
   // ── Prüfung des Willens: Pokahontas ─────────────────────────────────────────
 
   _startTemptation() {
-    this._tempActive = true;
-    this._pause = true;
+    this._tempActive  = true;
+    this._clothes     = 4;
+    this._tempWaveCount = 0;
+    this._tempScrollX = this.worldScroll;   // Scroll einfrieren
+    this.julia.setVisible(false);
+
+    // Apfel weiter links positionieren (mehr Platz zum Kämpfen)
+    this.player.x = this._tempScrollX + 90;
     this.player.setVelocity(0, 0);
     this.tapHeld = false;
-    this.julia.setVisible(false);   // Julia verschwindet
 
-    // Pfahl + Fesseln
-    this._pfahl = this.add.rectangle(this.player.x + 12, GROUND_Y - 50, 14, 100, 0x6b4a2a)
-      .setOrigin(0.5, 1).setDepth(2);
-    this._fessel = this.add.graphics().setDepth(4);
-    this._fessel.lineStyle(4, 0xd8c089, 1);
-    for (let k = 0; k < 3; k++) {
-      const yy = GROUND_Y - 90 + k * 26;
-      this._fessel.strokeRoundedRect(this.player.x - 6, yy, 40, 10, 5);
-    }
+    // Erhöhte Plattform für Pokahontas – Monsterchen laufen darunter durch
+    const pokaX  = this._tempScrollX + 290;
+    const platTop = GROUND_Y - 155;
+    this._pokaPlat = this.add.rectangle(pokaX, platTop, 170, 22, 0x7a5c2e)
+      .setOrigin(0.5, 1).setDepth(4);
 
-    // Pokahontas – Stand-Frame, weiter von Apfel entfernt
-    this._clothes = 4;
-    this._poka = this.add.image(this.player.x + 200, GROUND_Y, 'pokahontas_4')
-      .setOrigin(0.5, 1).setDisplaySize(122, 165).setDepth(5)
-      .setInteractive({ useHandCursor: true });
-    this._poka.on('pointerdown', () => this._undressTap());
+    this._poka = this.add.image(pokaX, platTop, 'pokahontas_4')
+      .setOrigin(0.5, 1).setDisplaySize(122, 165).setDepth(5);
     this._pokaDance = this.tweens.add({
       targets: this._poka, angle: { from: -6, to: 6 },
       duration: 400, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
     });
 
-    this._tempHint = this.add.text(225, 150, 'Widerstehe der Versuchung –\ntippe die Tänzerin!', {
-      fontFamily: 'Georgia, serif', fontSize: '20px', fontStyle: 'bold',
+    this._tempHint = this.add.text(225, 130,
+      'Pokahontas tanzt!\nFür je 5 Dämonen verliert sie ein Kleid …', {
+      fontFamily: 'Georgia, serif', fontSize: '18px', fontStyle: 'bold',
       color: '#ffd54f', stroke: '#000', strokeThickness: 5, align: 'center',
     }).setScrollFactor(0).setOrigin(0.5).setDepth(22);
+
+    // 25 Monsterchen in Wellen, alle 650ms eines
+    this._tempWaveTimer = this.time.addEvent({
+      delay: 650, callback: this._spawnTempEnemy,
+      callbackScope: this, repeat: 24,
+    });
   }
 
-  _undressTap() {
+  _spawnTempEnemy() {
+    if (!this._tempActive) return;
+    const e = this.enemyGroup.create(this._tempScrollX + 490, GROUND_Y + 3, 'elw_1');
+    e.setOrigin(0.5, 1).setDisplaySize(56, 64).setDepth(3).setFlipX(true);
+    e.body.allowGravity = false;
+    e.body.setSize(40, 56);
+    e.setVelocityX(-130);   // schneller als normal
+    e.play('elw_walk');
+
+    this._tempWaveCount++;
+    if (this._tempWaveCount % 5 === 0 && this._clothes > 0) {
+      this.time.delayedCall(1100, () => this._undressWave());
+    }
+  }
+
+  _undressWave() {
     if (!this._tempActive || this._clothes <= 0) return;
     this._clothes--;
     this._poka.setTexture(`pokahontas_${this._clothes}`);
-    this.sound.play('sfx_coin', { volume: 0.5 });
+    this.sound.play('sfx_coin', { volume: 0.8 });
+    if (this._tempHint) {
+      this._tempHint.setText(this._clothes > 0
+        ? `Weiter kämpfen! Noch ${this._clothes} Kleidungsstück${this._clothes > 1 ? 'e' : ''} …`
+        : 'Sie ist nackt! Fast geschafft!');
+    }
     if (this._clothes <= 0) {
-      // Nackt: kurz stehen lassen, dann Szene beenden
+      if (this._tempWaveTimer) { this._tempWaveTimer.remove(); this._tempWaveTimer = null; }
       this.time.delayedCall(1800, () => this._endTemptation());
     }
   }
 
   _endTemptation() {
-    // Pokahontas verschwindet, Julia kehrt zurück, es geht weiter.
     this.sound.play('sfx_disappear', { volume: 0.8 });
     if (this._pokaDance) this._pokaDance.stop();
-    this._tempHint.setText('Bestanden!');
+    if (this._tempWaveTimer) { this._tempWaveTimer.remove(); this._tempWaveTimer = null; }
+    if (this._tempHint) this._tempHint.setText('Bestanden!');
     this.tweens.add({
       targets: this._poka, alpha: 0, scaleY: 0, duration: 700,
       onComplete: () => {
-        [this._poka, this._pfahl, this._fessel, this._tempHint].forEach(o => o && o.destroy());
-        this._poka = this._pfahl = this._fessel = this._tempHint = null;
+        [this._poka, this._pokaPlat, this._tempHint].forEach(o => o && o.destroy());
+        this._poka = this._pokaPlat = this._tempHint = null;
         this._tempActive = false;
         this._tempDone   = true;
         this.julia.setVisible(true);
-        this._pause = false;
       },
     });
   }
@@ -589,16 +616,24 @@ class GameScene extends Phaser.Scene {
     if (this.cfg.temptation && !this._tempDone && !this._tempActive &&
         this.worldScroll >= this.cfg.temptation.x) { this._startTemptation(); return; }
 
-    // ── Autoscroll ───────────────────────────────────────────────────────────
-    this.worldScroll = Math.min(this.worldScroll + this.cfg.scrollSpeed * dt, this.maxScroll);
+    // ── Autoscroll (während Versuchung eingefroren) ──────────────────────────
+    if (this._tempActive) {
+      this.worldScroll = this._tempScrollX;
+    } else {
+      this.worldScroll = Math.min(this.worldScroll + this.cfg.scrollSpeed * dt, this.maxScroll);
+    }
     this.cameras.main.scrollX = this.worldScroll;
 
     // ── Schorle-Pegel: exponentieller Zerfall (erst schnell, dann langsam) ────
     this.fuel = Math.max(0, this.fuel - this.fuel * this.drainK * dt);
     this._refreshStateFromFuel();
 
-    const factor = FUEL_BASE + FUEL_GAIN * this.fuel;
-    this.player.setVelocityX(this.cfg.scrollSpeed * factor);
+    if (this._tempActive) {
+      this.player.setVelocityX(0);   // Apfel bleibt stehen
+    } else {
+      const factor = FUEL_BASE + FUEL_GAIN * this.fuel;
+      this.player.setVelocityX(this.cfg.scrollSpeed * factor);
+    }
 
     // ── Sprung (nicht im Jugger) ─────────────────────────────────────────────
     const onGround = this.player.body.blocked.down || this.player.body.touching.down;
@@ -629,16 +664,18 @@ class GameScene extends Phaser.Scene {
         this.player.setVelocityX(this.cfg.scrollSpeed);
     }
 
-    // ── Julia ────────────────────────────────────────────────────────────────
-    this.juliaIntroT += dt;
-    let jsx = JULIA_SCREEN_X;
-    if (this.juliaIntroT < JULIA_INTRO)
-      jsx = Phaser.Math.Linear(-80, JULIA_SCREEN_X, this.juliaIntroT / JULIA_INTRO);
-    this.julia.x = this.worldScroll + jsx;
-    this.julia.y = GROUND_Y + Math.sin(time / 110) * 4;
+    // ── Julia (während Versuchung unsichtbar + kein Fang-Check) ─────────────
+    if (!this._tempActive) {
+      this.juliaIntroT += dt;
+      let jsx = JULIA_SCREEN_X;
+      if (this.juliaIntroT < JULIA_INTRO)
+        jsx = Phaser.Math.Linear(-80, JULIA_SCREEN_X, this.juliaIntroT / JULIA_INTRO);
+      this.julia.x = this.worldScroll + jsx;
+      this.julia.y = GROUND_Y + Math.sin(time / 110) * 4;
 
-    if (this.juliaIntroT >= JULIA_INTRO && (this.player.x - this.worldScroll) < CATCH_DIST) {
-      this._lose('caught'); return;
+      if (this.juliaIntroT >= JULIA_INTRO && (this.player.x - this.worldScroll) < CATCH_DIST) {
+        this._lose('caught'); return;
+      }
     }
 
     if (this.player.y > 1100) { this._lose('fell'); return; }
@@ -653,18 +690,20 @@ class GameScene extends Phaser.Scene {
     }
 
     // ── Feinde ───────────────────────────────────────────────────────────────
-    while (
-      this.nextEnemyIdx < this.cfg.enemyX.length &&
-      this.cfg.enemyX[this.nextEnemyIdx] < this.worldScroll + 900
-    ) {
-      const ex = this.cfg.enemyX[this.nextEnemyIdx++];
-      if (ex > this.worldScroll - 100) {
-        const e = this.enemyGroup.create(ex, GROUND_Y + 3, 'elw_1');
-        e.setOrigin(0.5, 1).setDisplaySize(56, 64).setDepth(3).setFlipX(true);
-        e.body.allowGravity = false;
-        e.body.setSize(40, 56);
-        e.setVelocityX(-80);
-        e.play('elw_walk');
+    if (!this._tempActive) {
+      while (
+        this.nextEnemyIdx < this.cfg.enemyX.length &&
+        this.cfg.enemyX[this.nextEnemyIdx] < this.worldScroll + 900
+      ) {
+        const ex = this.cfg.enemyX[this.nextEnemyIdx++];
+        if (ex > this.worldScroll - 100) {
+          const e = this.enemyGroup.create(ex, GROUND_Y + 3, 'elw_1');
+          e.setOrigin(0.5, 1).setDisplaySize(56, 64).setDepth(3).setFlipX(true);
+          e.body.allowGravity = false;
+          e.body.setSize(40, 56);
+          e.setVelocityX(-80);
+          e.play('elw_walk');
+        }
       }
     }
     this.enemyGroup.getChildren().forEach(e => {

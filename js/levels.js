@@ -81,7 +81,7 @@ const LEVELS = [
     },
   },
   {
-    title: 'Jugger-Turnier',
+    title: 'Der Schorle-Showdown',
     subtitle: 'Schleudere die Kette – triff im richtigen Moment!',
     scrollSpeed: 165,
     levelWidth: 5200,
