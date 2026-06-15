@@ -540,7 +540,7 @@ class GameScene extends Phaser.Scene {
       .setDisplaySize(56, 74).setDepth(6);
     this.physics.add.collider(s, this.groundGroup);
     this.physics.add.overlap(this.player, s, () => {
-      if (s.active) { s.destroy(); this._onSchorle(); }
+      if (s.active) { s.destroy(); this.fuel = 1; this.sound.play('sfx_magic', { volume: 0.8 }); }
     });
     this._tempDrops.push(s);
   }
