@@ -921,7 +921,11 @@ class GameScene extends Phaser.Scene {
     this.cameras.main.scrollX = this.worldScroll;
 
     // ── Schorle-Pegel: exponentieller Zerfall (erst schnell, dann langsam) ────
-    this.fuel = Math.max(0, this.fuel - this.fuel * this.drainK * dt);
+    // Im Pokahontas-Kampf läuft Schorle langsamer ab (40 % der normalen Rate)
+    const activeDrainK = (this._tempActive && !this._tempWalking)
+      ? this.drainK * 0.4
+      : this.drainK;
+    this.fuel = Math.max(0, this.fuel - this.fuel * activeDrainK * dt);
     this._refreshStateFromFuel();
 
     // Während Versuchung: kein Schorle-Vorrat mehr = verloren
