@@ -65,11 +65,12 @@ class GameScene extends Phaser.Scene {
     this._stompWindow   = 0;
 
     // Interaktions-Pause (Quiz / Versuchung)
-    this._pause       = false;
-    this._quizActive  = false;
-    this._quizDone    = false;
-    this._tempActive  = false;
-    this._tempDone    = false;
+    this._pause        = false;
+    this._countingDown = false;
+    this._quizActive   = false;
+    this._quizDone     = false;
+    this._tempActive   = false;
+    this._tempDone     = false;
 
     const W = 450, H = 800;
     this.worldScroll = 0;
@@ -236,28 +237,81 @@ class GameScene extends Phaser.Scene {
     // ── HUD ───────────────────────────────────────────────────────────────────
     this.scene.launch('HudScene', { gameScene: this });
 
-    // ── Level title + Untertitel ───────────────────────────────────────────────
-    const titleTxt = this.add.text(W/2, 320, this.cfg.title, {
-      fontFamily: 'Georgia, serif', fontSize: '30px', fontStyle: 'bold',
-      color: '#ffd54f', stroke: '#000', strokeThickness: 6, align: 'center',
-      wordWrap: { width: 420 },
-    }).setScrollFactor(0).setOrigin(0.5).setDepth(10);
-    const subTxt = this.add.text(W/2, 366, this.cfg.subtitle ?? '', {
-      fontFamily: 'Georgia, serif', fontSize: '18px', fontStyle: 'italic',
-      color: '#ffffff', stroke: '#000', strokeThickness: 4, align: 'center',
-      wordWrap: { width: 420 },
-    }).setScrollFactor(0).setOrigin(0.5).setDepth(10);
-    this.tweens.add({
-      targets: [titleTxt, subTxt], alpha: 0, delay: 2000, duration: 800,
-      onComplete: () => { titleTxt.destroy(); subTxt.destroy(); },
-    });
-
-    // Debug-Skip: ?fight springt direkt in die Pokahontas-Prüfung
+    // ── Level-Intro ────────────────────────────────────────────────────────────
     if (new URLSearchParams(window.location.search).has('fight') && this.cfg.temptation) {
+      // Debug-Skip: kein Intro, direkt in den Pokahontas-Kampf
       this.worldScroll = this.cfg.temptation.x;
       this.cameras.main.scrollX = this.worldScroll;
       this.time.delayedCall(300, () => this._startTemptation());
+    } else {
+      this._countingDown = true;
+      this._showLevelIntro();
     }
+  }
+
+  // ── Level-Intro: Beschreibung + 3-2-1-Countdown ─────────────────────────
+
+  _showLevelIntro() {
+    const W = 450, H = 800;
+
+    const overlay = this.add.rectangle(W/2, H/2, W, H, 0x000000, 0.72)
+      .setScrollFactor(0).setDepth(50).setAlpha(0);
+
+    const badgeTxt = this.add.text(W/2, 272, `– Prüfung ${this.levelIdx + 1} von ${LEVELS.length} –`, {
+      fontFamily: 'Georgia, serif', fontSize: '16px',
+      color: '#e8b86d', stroke: '#000', strokeThickness: 4,
+    }).setScrollFactor(0).setOrigin(0.5).setDepth(51).setAlpha(0);
+
+    const titleTxt = this.add.text(W/2, 334, this.cfg.title, {
+      fontFamily: 'Georgia, serif', fontSize: '32px', fontStyle: 'bold',
+      color: '#ffd54f', stroke: '#000', strokeThickness: 7, align: 'center',
+      wordWrap: { width: 400 },
+    }).setScrollFactor(0).setOrigin(0.5).setDepth(51).setAlpha(0);
+
+    const subTxt = this.add.text(W/2, 400, this.cfg.subtitle ?? '', {
+      fontFamily: 'Georgia, serif', fontSize: '18px', fontStyle: 'italic',
+      color: '#ffffff', stroke: '#000', strokeThickness: 4, align: 'center',
+      wordWrap: { width: 390 },
+    }).setScrollFactor(0).setOrigin(0.5).setDepth(51).setAlpha(0);
+
+    const countTxt = this.add.text(W/2, 570, '', {
+      fontFamily: 'Arial, sans-serif', fontSize: '96px', fontStyle: 'bold',
+      color: '#ffffff', stroke: '#000', strokeThickness: 14,
+    }).setScrollFactor(0).setOrigin(0.5).setDepth(52).setAlpha(0);
+
+    const introElems = [overlay, badgeTxt, titleTxt, subTxt];
+
+    // Einblenden
+    this.tweens.add({ targets: introElems, alpha: 1, duration: 420 });
+
+    // 3 – 2 – 1 nach der Lesezeit
+    const READ_MS = 2300;
+    const tick = (n, delay) => {
+      this.time.delayedCall(delay, () => {
+        countTxt.setText(`${n}`).setAlpha(1).setScale(1.7);
+        this.tweens.add({
+          targets: countTxt, scale: 1.0, duration: 580, ease: 'Back.easeOut',
+        });
+        this.sound.play('sfx_bump', { volume: 0.30 });
+      });
+    };
+    tick(3, READ_MS);
+    tick(2, READ_MS + 700);
+    tick(1, READ_MS + 1400);
+
+    // Ausblenden + Spiel freischalten
+    this.time.delayedCall(READ_MS + 1950, () => {
+      this.tweens.add({
+        targets: [...introElems, countTxt], alpha: 0, duration: 260,
+        onComplete: () => {
+          introElems.forEach(o => o.destroy());
+          countTxt.destroy();
+          this._countingDown = false;
+          this.jumpBuffer = 0;
+          this.tapHeld    = false;
+        },
+      });
+    });
   }
 
   // ── Animations ────────────────────────────────────────────────────────────
@@ -689,7 +743,7 @@ class GameScene extends Phaser.Scene {
 
   _dropTempSchorle() {
     if (!this._tempActive) return;
-    const sx = this._tempScrollX + Phaser.Math.Between(110, 200);
+    const sx = this.player.x;
     // Kein physics.add.image: Physics-Bodys landen im Quadtree und lösen
     // fälschlicherweise _onSchorle(player, undefined) für schorleGroup aus.
     // Stattdessen: normales Image + Tween-Fall + manuelle Nähe-Prüfung in update().
@@ -786,6 +840,11 @@ class GameScene extends Phaser.Scene {
       this.julia.stop();
       this.julia.setTexture('julia_catch').setDisplaySize(110, 90);
       this.sound.play('sfx_hurt', { volume: 0.9 });
+    } else if (reason === 'poka_schorle') {
+      // Kampftod: Schorle leer – Kampfmusik sofort stoppen
+      if (this._fightMusic) { this._fightMusic.stop(); this._fightMusic = null; }
+      this.playerVisual.setTint(0xff4444);
+      this.sound.play('sfx_disappear', { volume: 0.9 });
     } else if (reason === 'fell') {
       this.playerVisual.setTint(0xff4444);
       this.sound.play('sfx_disappear', { volume: 0.9 });
@@ -833,7 +892,7 @@ class GameScene extends Phaser.Scene {
     const dt = delta / 1000;
 
     // Während Quiz/Versuchung: alles eingefroren, nur Kamera/Animationen ruhen.
-    if (this._pause) {
+    if (this._pause || this._countingDown) {
       this.player.setVelocityX(0);
       this.cameras.main.scrollX = this.worldScroll;
       return;
@@ -859,7 +918,7 @@ class GameScene extends Phaser.Scene {
 
     // Während Versuchung: kein Schorle-Vorrat mehr = verloren
     if (this._tempActive && !this._tempWalking && this.apfelState === 'small') {
-      this._lose('caught'); return;
+      this._lose('poka_schorle'); return;
     }
 
     if (this._tempActive) {

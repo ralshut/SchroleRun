@@ -21,6 +21,8 @@ class GameOverScene extends Phaser.Scene {
     } else if (reason === 'quiz') {
       headline = 'Falsch gemischt!';
       sub = 'Die Schorle ergoss sich über dich –\nProbe nicht bestanden.';
+    } else if (reason === 'poka_schorle') {
+      sub = 'Die Elwetrischte hat all seine\nSchorle getrunken.';
     }
 
     this.add.text(W / 2, 250, headline, {
