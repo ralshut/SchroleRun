@@ -318,6 +318,7 @@ class GameScene extends Phaser.Scene {
   }
 
   _onSchorle(player, schorle) {
+    if (!schorle || !schorle.active) return;
     schorle.destroy();
     this.fuel = 1;
     // WICHTIG: Größe NICHT hier ändern. Dieser Callback läuft mitten im
