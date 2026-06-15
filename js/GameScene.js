@@ -33,6 +33,10 @@ const JUMP_BUFFER = 0.13;
 const APFEL_SMALL = { w: 56, h: 70 };
 const APFEL_LARGE = { w: 72, h: 90 };
 
+// Fester unsichtbarer Physik-Body (Mittelwert, nie geändert)
+const APFEL_BODY_W = Math.round(APFEL_LARGE.w * 0.72);  // 52
+const APFEL_BODY_H = Math.round(APFEL_LARGE.h * 0.86);  // 77
+
 class GameScene extends Phaser.Scene {
   constructor() { super('GameScene'); }
 
@@ -161,10 +165,24 @@ class GameScene extends Phaser.Scene {
     this._createAnimations();
 
     // ── Player ────────────────────────────────────────────────────────────────
-    this.player = this.physics.add.sprite(PLAYER_START_X, GROUND_Y, 'apfel_small_1');
-    this.player.setOrigin(0, 1).setDepth(3);
+    // Unsichtbarer fester Physik-Body – Größe bleibt immer APFEL_BODY_W×APFEL_BODY_H,
+    // unabhängig von Animations-Frame oder State (small/large). Das verhindert
+    // Boden-Clipping und fehlende Schorle-Overlaps durch schwankende Frame-Maße.
+    if (!this.textures.exists('_hitbox')) {
+      const g = this.make.graphics({ add: false });
+      g.fillStyle(0xffffff, 1); g.fillRect(0, 0, 1, 1);
+      g.generateTexture('_hitbox', 1, 1); g.destroy();
+    }
+    this.player = this.physics.add.sprite(PLAYER_START_X, GROUND_Y, '_hitbox');
+    this.player.setOrigin(0, 1).setAlpha(0);
+    this.player.setDisplaySize(APFEL_BODY_W, APFEL_BODY_H);
     this.player.setMaxVelocity(800, TERM_VEL);
     this.player.body.setCollideWorldBounds(false);
+    this.player.body.setSize(1, 1);  // 1×1 source × scale = APFEL_BODY_W×APFEL_BODY_H Weltpixel
+
+    // Visuelle Darstellung: folgt dem Physik-Body, wechselt Animation/Größe je State
+    this.playerVisual = this.add.sprite(PLAYER_START_X, GROUND_Y, 'apfel_small_1');
+    this.playerVisual.setOrigin(0, 1).setDepth(3);
     this._applyStateSize();
 
     // ── Kampfstern (nur Jugger) ────────────────────────────────────────────────
@@ -390,18 +408,9 @@ class GameScene extends Phaser.Scene {
       largeEmpty: 'apfel_large_empty_run',
       small:      'apfel_small_run',
     };
-    this.player.play(animMap[this.apfelState], true);
-    this._lockPlayerSize();
-  }
-
-  _lockPlayerSize() {
+    this.playerVisual.play(animMap[this.apfelState], true);
     const { w, h } = (this.apfelState !== 'small') ? APFEL_LARGE : APFEL_SMALL;
-    this.player.setDisplaySize(w, h);
-    this.player.setOrigin(0, 1);
-    const fw = this.player.frame.realWidth;
-    const fh = this.player.frame.realHeight;
-    this.player.body.setSize(fw * 0.72, fh * 0.86, false);
-    this.player.body.setOffset(fw * 0.14, fh * 0.10);
+    this.playerVisual.setDisplaySize(w, h);
   }
 
   // ── Brücken-Quiz ────────────────────────────────────────────────────────────
@@ -475,7 +484,7 @@ class GameScene extends Phaser.Scene {
       this.tweens.add({
         targets: splash, y: GROUND_Y - 40, duration: 600, ease: 'Quad.easeIn',
         onComplete: () => {
-          this.player.setTint(0x66aaff);
+          this.playerVisual.setTint(0x66aaff);
           this._lose('quiz');
         },
       });
@@ -663,7 +672,7 @@ class GameScene extends Phaser.Scene {
       this.julia.setTexture('julia_catch').setDisplaySize(110, 90);
       this.sound.play('sfx_hurt', { volume: 0.9 });
     } else if (reason === 'fell') {
-      this.player.setTint(0xff4444);
+      this.playerVisual.setTint(0xff4444);
       this.sound.play('sfx_disappear', { volume: 0.9 });
     } else if (reason !== 'quiz') {
       this.sound.play('sfx_hurt', { volume: 0.9 });
@@ -703,9 +712,10 @@ class GameScene extends Phaser.Scene {
   // ── Update ────────────────────────────────────────────────────────────────
 
   update(time, delta) {
-    if (this._gameOver) { this._lockPlayerSize(); return; }
+    // Visual folgt dem Physik-Body (jeder Frame, auch im Game-Over-Freeze)
+    this.playerVisual.setPosition(this.player.x, this.player.y);
+    if (this._gameOver) return;
     const dt = delta / 1000;
-    this._lockPlayerSize();
 
     // Während Quiz/Versuchung: alles eingefroren, nur Kamera/Animationen ruhen.
     if (this._pause) {
@@ -810,8 +820,8 @@ class GameScene extends Phaser.Scene {
     if (this.invTimer > 0) {
       this.invTimer -= dt;
       this.flickerT += dt;
-      this.player.setAlpha(Math.floor(this.flickerT * 10) % 2 === 0 ? 1 : 0.25);
-      if (this.invTimer <= 0) this.player.setAlpha(1);
+      this.playerVisual.setAlpha(Math.floor(this.flickerT * 10) % 2 === 0 ? 1 : 0.25);
+      if (this.invTimer <= 0) this.playerVisual.setAlpha(1);
     }
 
     // ── Feinde ───────────────────────────────────────────────────────────────
