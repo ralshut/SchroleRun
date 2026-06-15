@@ -559,7 +559,7 @@ class GameScene extends Phaser.Scene {
 
   _startTemptation() {
     this._tempActive  = true;
-    this._clothes     = 4;
+    this._clothes     = 5;
     this._tempWaveCount = 0;
     this._tempScrollX = this.worldScroll;   // Scroll einfrieren
     this.fuel = 1;                          // Schorle-Vorrat auffüllen
@@ -595,19 +595,18 @@ class GameScene extends Phaser.Scene {
       duration: 400, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
     });
 
-    this._tempHint = this.add.text(225, 130,
-      'Pokahontas tanzt!\nFür je 5 Dämonen verliert sie ein Kleid …', {
+    this._tempHint = this.add.text(225, 130, 'Noch 5 Elwetrische', {
       fontFamily: 'Georgia, serif', fontSize: '18px', fontStyle: 'bold',
       color: '#ffd54f', stroke: '#000', strokeThickness: 5, align: 'center',
     }).setScrollFactor(0).setOrigin(0.5).setDepth(22);
 
-    // Monsterchen mit variablen Abständen (1000–3000 ms), 20 insgesamt.
+    // Monsterchen mit variablen Abständen (1000–3000 ms), 25 insgesamt.
     // Breites Intervall → 1–2 Monster gleichzeitig, echte Lücken bleiben.
     this._tempDrops   = [];
     this._tempWalking = false;
     this._undressing  = false;
     const spawnNext = () => {
-      if (!this._tempActive || this._tempWaveCount >= 20) return;
+      if (!this._tempActive || this._tempWaveCount >= 25) return;
       if (this._undressing) {
         // Kurz warten bis Überblendung durch ist, dann weitermachen
         this._tempWaveTimer = this.time.delayedCall(200, spawnNext);
@@ -743,8 +742,8 @@ class GameScene extends Phaser.Scene {
     if (this._tempWaveCount % 5 === 0 && this._clothes > 0) {
       this.time.delayedCall(1100, () => this._undressWave());
     }
-    // Nach dem 6., 13. und 18. Monster fällt eine Schorle vom Himmel
-    if ([6, 13, 18].includes(this._tempWaveCount)) {
+    // Nach dem 8., 16. und 23. Monster fällt eine Schorle vom Himmel
+    if ([8, 16, 23].includes(this._tempWaveCount)) {
       this.time.delayedCall(400, () => this._dropTempSchorle());
     }
   }
@@ -777,11 +776,11 @@ class GameScene extends Phaser.Scene {
     this.tweens.add({
       targets: this._poka, alpha: 0, duration: 380,
       onComplete: () => {
-        this._poka.setTexture(`pokahontas_${newClothes}`);
-        this.sound.play('sfx_coin', { volume: 0.8 });
+        this._poka.setTexture(`pokahontas_${Math.min(newClothes, 4)}`);
+        this.sound.play('sfx_magic', { volume: 0.8 });
         if (this._tempHint) {
           this._tempHint.setText(newClothes > 0
-            ? `Weiter kämpfen! Noch ${newClothes} Kleidungsstück${newClothes > 1 ? 'e' : ''} …`
+            ? `Noch ${newClothes} Elwetrische`
             : 'Sie ist nackt! Fast geschafft!');
         }
         this.tweens.add({
@@ -793,6 +792,19 @@ class GameScene extends Phaser.Scene {
             if (newClothes <= 0) {
               if (this._tempWaveTimer) { this._tempWaveTimer.remove(); this._tempWaveTimer = null; }
               this.time.delayedCall(1800, () => this._endTemptation());
+            } else {
+              const fastCount = Math.min(3, 5 - newClothes);
+              for (let i = 0; i < fastCount; i++) {
+                this.time.delayedCall(i * 400, () => {
+                  if (!this._tempActive) return;
+                  const fe = this.enemyGroup.create(this._tempScrollX + 500, GROUND_Y + 3, 'elw_1');
+                  fe.setOrigin(0.5, 1).setDisplaySize(56, 64).setDepth(3).setFlipX(true);
+                  fe.body.allowGravity = false;
+                  fe.body.setSize(40, 56);
+                  fe.setVelocityX(-210);
+                  fe.play('elw_walk');
+                });
+              }
             }
           },
         });
