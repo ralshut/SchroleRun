@@ -132,9 +132,9 @@ class GameScene extends Phaser.Scene {
     this.schorleGroup = this.physics.add.group();
     (this.cfg.schorle || []).forEach(([sx, sy]) => {
       const s = this.schorleGroup.create(sx, sy, 'schorle');
-      s.setDisplaySize(56, 74).setOrigin(0.5, 1).setDepth(2);
+      s.setDisplaySize(74, 74).setOrigin(0.5, 1).setDepth(2);
       s.body.allowGravity = false;
-      s.body.setSize(46, 62);
+      s.body.setSize(62, 62);
       s._baseY = sy;
       s._bobT  = 0;
     });
@@ -541,7 +541,7 @@ class GameScene extends Phaser.Scene {
     // fälschlicherweise _onSchorle(player, undefined) für schorleGroup aus.
     // Stattdessen: normales Image + Tween-Fall + manuelle Nähe-Prüfung in update().
     const s = this.add.image(sx, GROUND_Y - 310, 'schorle')
-      .setDisplaySize(56, 74).setOrigin(0.5, 1).setDepth(6);
+      .setDisplaySize(74, 74).setOrigin(0.5, 1).setDepth(6);
     this.tweens.add({
       targets: s, y: GROUND_Y, duration: 900, ease: 'Quad.easeIn',
     });
