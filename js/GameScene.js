@@ -492,11 +492,16 @@ class GameScene extends Phaser.Scene {
     this.player.setVelocity(0, 0);
     this.tapHeld = false;
 
-    // Erhöhte Plattform für Pokahontas – Monsterchen laufen darunter durch
-    const pokaX  = this._tempScrollX + 290;
+    // Erhöhte Plattform für Pokahontas – 3 Terrain-Kacheln statt Rechteck
+    const pokaX   = this._tempScrollX + 290;
     const platTop = GROUND_Y - 155;
-    this._pokaPlat = this.add.rectangle(pokaX, platTop, 170, 22, 0x7a5c2e)
-      .setOrigin(0.5, 1).setDepth(4);
+    const theme   = this.cfg.tileTheme ?? 'grass';
+    const pLeft   = pokaX - TILE_SIZE * 1.5;
+    this._pokaPlat = [
+      this.add.image(pLeft,              platTop, `terrain_${theme}_horizontal_left`)  .setOrigin(0,1).setDisplaySize(TILE_SIZE,TILE_SIZE).setDepth(4),
+      this.add.image(pLeft + TILE_SIZE,  platTop, `terrain_${theme}_horizontal_middle`).setOrigin(0,1).setDisplaySize(TILE_SIZE,TILE_SIZE).setDepth(4),
+      this.add.image(pLeft + TILE_SIZE*2,platTop, `terrain_${theme}_horizontal_right`) .setOrigin(0,1).setDisplaySize(TILE_SIZE,TILE_SIZE).setDepth(4),
+    ];
 
     this._poka = this.add.image(pokaX, platTop, 'pokahontas_4')
       .setOrigin(0.5, 1).setDisplaySize(122, 165).setDepth(5);
@@ -514,8 +519,14 @@ class GameScene extends Phaser.Scene {
     // Monsterchen mit variablen Abständen (380–1050 ms), 25 insgesamt
     this._tempDrops   = [];
     this._tempWalking = false;
+    this._undressing  = false;
     const spawnNext = () => {
       if (!this._tempActive || this._tempWaveCount >= 25) return;
+      if (this._undressing) {
+        // Kurz warten bis Überblendung durch ist, dann weitermachen
+        this._tempWaveTimer = this.time.delayedCall(200, spawnNext);
+        return;
+      }
       this._spawnTempEnemy();
       this._tempWaveTimer = this.time.delayedCall(Phaser.Math.Between(380, 1050), spawnNext);
     };
@@ -558,17 +569,38 @@ class GameScene extends Phaser.Scene {
   _undressWave() {
     if (!this._tempActive || this._clothes <= 0) return;
     this._clothes--;
-    this._poka.setTexture(`pokahontas_${this._clothes}`);
-    this.sound.play('sfx_coin', { volume: 0.8 });
-    if (this._tempHint) {
-      this._tempHint.setText(this._clothes > 0
-        ? `Weiter kämpfen! Noch ${this._clothes} Kleidungsstück${this._clothes > 1 ? 'e' : ''} …`
-        : 'Sie ist nackt! Fast geschafft!');
-    }
-    if (this._clothes <= 0) {
-      if (this._tempWaveTimer) { this._tempWaveTimer.remove(); this._tempWaveTimer = null; }
-      this.time.delayedCall(1800, () => this._endTemptation());
-    }
+    const newClothes = this._clothes;
+
+    // Physik einfrieren + Dance-Tween anhalten
+    this.physics.world.pause();
+    this._undressing = true;
+    if (this._pokaDance) this._pokaDance.pause();
+
+    // Ausblenden → Textur wechseln → Einblenden
+    this.tweens.add({
+      targets: this._poka, alpha: 0, duration: 380,
+      onComplete: () => {
+        this._poka.setTexture(`pokahontas_${newClothes}`);
+        this.sound.play('sfx_coin', { volume: 0.8 });
+        if (this._tempHint) {
+          this._tempHint.setText(newClothes > 0
+            ? `Weiter kämpfen! Noch ${newClothes} Kleidungsstück${newClothes > 1 ? 'e' : ''} …`
+            : 'Sie ist nackt! Fast geschafft!');
+        }
+        this.tweens.add({
+          targets: this._poka, alpha: 1, duration: 380, delay: 250,
+          onComplete: () => {
+            if (this._pokaDance) this._pokaDance.resume();
+            this.physics.world.resume();
+            this._undressing = false;
+            if (newClothes <= 0) {
+              if (this._tempWaveTimer) { this._tempWaveTimer.remove(); this._tempWaveTimer = null; }
+              this.time.delayedCall(1800, () => this._endTemptation());
+            }
+          },
+        });
+      },
+    });
   }
 
   _endTemptation() {
@@ -588,7 +620,8 @@ class GameScene extends Phaser.Scene {
     this.tweens.add({
       targets: this._poka, alpha: 0, scaleY: 0, duration: 700,
       onComplete: () => {
-        [this._poka, this._pokaPlat, this._tempHint].forEach(o => o && o.destroy());
+        if (this._pokaPlat) { this._pokaPlat.forEach(t => t.destroy()); }
+        [this._poka, this._tempHint].forEach(o => o && o.destroy());
         this._poka = this._pokaPlat = this._tempHint = null;
 
         // Apfel läuft langsam nach rechts bevor Julia wiederkommt,
