@@ -68,10 +68,16 @@ class WinScene extends Phaser.Scene {
     apfel.play('apfel_large_full_run');
 
     // ── Julia läuft von rechts (gespiegelt) ─────────────────────────────
-    const jh = 130;
-    const julia = this.add.image(W + 80, groundY, 'julia')
-      .setOrigin(0.5, 1).setDisplaySize(Math.round(jh * 300 / 1125), jh)
+    if (!this.anims.exists('julia_run'))
+      this.anims.create({
+        key: 'julia_run',
+        frames: [1,2,3,4,5].map(i => ({ key: `julia_run_${i}` })),
+        frameRate: 8, repeat: -1,
+      });
+    const julia = this.add.sprite(W + 80, groundY, 'julia_run_1')
+      .setOrigin(0.5, 1).setDisplaySize(110, 90)
       .setDepth(5).setFlipX(true);
+    julia.play('julia_run');
 
     // ── Herz-Grafik ──────────────────────────────────────────────────────
     const heartGfx = this.add.graphics().setDepth(9);
@@ -98,8 +104,8 @@ class WinScene extends Phaser.Scene {
     this.tweens.add({ targets: apfel, x: W * 0.35, duration: 1300, ease: 'Quad.easeOut' });
     this.tweens.add({ targets: julia, x: W * 0.65, duration: 1300, ease: 'Quad.easeOut' });
 
-    // t = 1300ms : Apfel hält an
-    seq(1300, () => apfel.stop());
+    // t = 1300ms : Beide halten an
+    seq(1300, () => { apfel.stop(); julia.stop(); });
 
     // t = 1650ms : Herz wächst über die Charaktere
     seq(1650, () => {

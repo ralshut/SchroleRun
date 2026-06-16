@@ -588,7 +588,7 @@ class GameScene extends Phaser.Scene {
       this.add.image(pLeft + TILE_SIZE*2,platTop, `terrain_${theme}_horizontal_right`) .setOrigin(0,1).setDisplaySize(TILE_SIZE,TILE_SIZE).setDepth(4),
     ];
 
-    this._poka = this.add.image(pokaX, platTop, 'pokahontas_4')
+    this._poka = this.add.image(pokaX, platTop - TILE_SIZE, 'pokahontas_4')
       .setOrigin(0.5, 1).setDisplaySize(122, 165).setDepth(5);
     this._pokaDance = this.tweens.add({
       targets: this._poka, angle: { from: -6, to: 6 },
