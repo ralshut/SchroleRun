@@ -708,7 +708,6 @@ class GameScene extends Phaser.Scene {
     // stage 0 = kleinst (50×56), stage 4 = größt (168×192)
     const BOSS_SIZES = [[50, 56], [68, 78], [100, 116], [134, 154], [168, 192]];
     this._kinderShrinking = true;
-    this.physics.world.pause();
     if (this._pokaDance) this._pokaDance.pause();
 
     this.tweens.add({
@@ -721,7 +720,6 @@ class GameScene extends Phaser.Scene {
           targets: this._poka, alpha: 1, duration: 300, delay: 100,
           onComplete: () => {
             if (this._pokaDance) this._pokaDance.resume();
-            this.physics.world.resume();
             this._kinderShrinking = false;
           },
         });
@@ -731,11 +729,11 @@ class GameScene extends Phaser.Scene {
 
   _spawnTempEnemy() {
     if (!this._tempActive) return;
-    const e = this.enemyGroup.create(this._tempScrollX + 490, GROUND_Y + 3, 'elw_1');
+    const e = this.enemyGroup.create(this._tempScrollX + 490, GROUND_Y, 'elw_1');
     e.setOrigin(0.5, 1).setDisplaySize(56, 64).setDepth(3).setFlipX(true);
     e.body.allowGravity = false;
     e.body.setSize(40, 56);
-    e.setVelocityX(-130);   // schneller als normal
+    e.setVelocityX(-130);
     e.play('elw_walk');
 
     this._tempWaveCount++;
@@ -797,7 +795,7 @@ class GameScene extends Phaser.Scene {
               for (let i = 0; i < fastCount; i++) {
                 this.time.delayedCall(i * 400, () => {
                   if (!this._tempActive) return;
-                  const fe = this.enemyGroup.create(this._tempScrollX + 500, GROUND_Y + 3, 'elw_1');
+                  const fe = this.enemyGroup.create(this._tempScrollX + 500, GROUND_Y, 'elw_1');
                   fe.setOrigin(0.5, 1).setDisplaySize(56, 64).setDepth(3).setFlipX(true);
                   fe.body.allowGravity = false;
                   fe.body.setSize(40, 56);
