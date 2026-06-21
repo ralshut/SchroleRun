@@ -816,6 +816,9 @@ class GameScene extends Phaser.Scene {
     if (this._tempWaveTimer) { this._tempWaveTimer.remove(); this._tempWaveTimer = null; }
     if (this._tempHint) this._tempHint.setText('Bestanden!');
     if (this._tempDrops) { this._tempDrops.forEach(s => s && s.active && s.destroy()); this._tempDrops = []; }
+    // Kinder-Modus: Minion-Feinde haben gravity + eigene Collider → sofort aufräumen,
+    // damit der Cleanup-Loop sie nicht mitten im Physics-Step einzeln zerstört.
+    if (this.kinder) { [...this.enemyGroup.getChildren()].forEach(e => e.destroy()); }
 
     // Kampfmusik ausblenden, Level-Musik wieder einblenden
     if (this._fightMusic) {
@@ -1037,8 +1040,8 @@ class GameScene extends Phaser.Scene {
         }
       }
     }
-    this.enemyGroup.getChildren().forEach(e => {
-      if (e.x < this.worldScroll - 300) e.destroy();
+    [...this.enemyGroup.getChildren()].forEach(e => {
+      if (e.active && e.x < this.worldScroll - 300) e.destroy();
     });
 
     // ── Schorle-Bob ──────────────────────────────────────────────────────────
