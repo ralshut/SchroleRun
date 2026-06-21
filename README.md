@@ -55,15 +55,13 @@ Beispiel: `https://ralshut.github.io/SchroleRun/?level=4`
 ?level=4&fight
 ```
 
-### Kinderversion (entschärfter Pokahontas-Fight)
+### Kinderversion – Level 4 von Anfang
 
 ```
-?kinder=1
+?kinder=1&level=4
 ```
 
-Startet Level 4 mit großem Elwetrische-Boss statt Pokahontas.
-
-### Kinderversion direkt zum Fight
+### Kinderversion – direkt zum Fight
 
 ```
 ?kinder=1&level=4&fight
